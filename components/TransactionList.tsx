@@ -7,13 +7,31 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface TransactionListProps {
   transactions: Transaction[];
   onDelete: (id: string) => void;
+  isLoading?: boolean;
 }
 
-export const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelete }) => {
+export const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelete, isLoading }) => {
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   // Sort by created (newest first)
-  const sortedTransactions = [...transactions].sort((a, b) => b.createdAt - a.createdAt);
+  const sortedTransactions = [...transactions].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  if (isLoading && sortedTransactions.length === 0) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col items-center justify-center py-12 text-slate-400 bg-white/60 rounded-3xl border-2 border-slate-100 border-dashed"
+      >
+        <div className="bg-slate-50 p-4 rounded-full mb-3 shadow-sm animate-pulse">
+            <Clock size={32} className="opacity-50 text-slate-500" />
+        </div>
+        <p className="font-medium text-slate-500">טוען נתונים...</p>
+      </motion.div>
+    );
+  }
 
   if (sortedTransactions.length === 0) {
     return (

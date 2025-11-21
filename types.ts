@@ -10,7 +10,7 @@ export interface Transaction {
   type: IncomeType;
   date: string; // ISO string
   description?: string;
-  createdAt: number;
+  createdAt: string; // ISO string
 }
 
 export interface MonthlyStats {

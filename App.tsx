@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Transaction, IncomeType, MonthlyStats } from './types';
 import { MonthSelector } from './components/MonthSelector';
 import { SummaryCard } from './components/SummaryCard';
@@ -6,8 +6,16 @@ import { CategoryCard } from './components/CategoryCard';
 import { TransactionModal } from './components/TransactionModal';
 import { TransactionList } from './components/TransactionList';
 import { TrendsChart } from './components/TrendsChart';
+import supabase from './supabaseClient';
 
-const STORAGE_KEY = 'income_tracker_data_v1';
+const mapRowToTransaction = (row: any): Transaction => ({
+  id: row.id,
+  amount: row.amount,
+  type: row.type as IncomeType,
+  date: row.date,
+  description: row.description ?? undefined,
+  createdAt: row.created_at,
+});
 
 function App() {
   // --- State ---
@@ -15,26 +23,29 @@ function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<IncomeType | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // --- Lifecycle ---
+  const fetchTransactions = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: true });
 
-  // Load from local storage on mount
-  useEffect(() => {
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    if (storedData) {
-      try {
-        const parsed = JSON.parse(storedData);
-        setTransactions(parsed);
-      } catch (e) {
-        console.error("Failed to parse transactions", e);
-      }
+    if (error) {
+      console.error('Failed to load transactions', error);
+      setError('אירעה שגיאה בטעינת הנתונים');
+    } else if (data) {
+      setTransactions(data.map(mapRowToTransaction));
     }
+    setIsLoading(false);
   }, []);
 
-  // Save to local storage on change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-  }, [transactions]);
+    fetchTransactions();
+  }, [fetchTransactions]);
 
   // --- Handlers ---
 
@@ -59,24 +70,42 @@ function App() {
     setIsModalOpen(true);
   };
 
-  const handleSaveTransaction = (amount: number, description: string) => {
+  const handleSaveTransaction = async (amount: number, description: string) => {
     if (!activeCategory) return;
 
-    const newTransaction: Transaction = {
-      id: Math.random().toString(36).substring(2, 15),
+    const payload = {
       amount,
       type: activeCategory,
       date: currentDate.toISOString(),
       description,
-      createdAt: Date.now(), // Use timestamp for sorting
+      created_at: new Date().toISOString(),
     };
 
-    setTransactions(prev => [...prev, newTransaction]);
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to save transaction', error);
+      setError('אירעה שגיאה בשמירת העסקה');
+      return;
+    }
+
+    if (data) {
+      setTransactions(prev => [...prev, mapRowToTransaction(data)]);
+    }
     setIsModalOpen(false);
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    // Confirmation is handled in the UI component (TransactionList)
+  const handleDeleteTransaction = async (id: string) => {
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    if (error) {
+      console.error('Failed to delete transaction', error);
+      setError('אירעה שגיאה במחיקת העסקה');
+      return;
+    }
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
@@ -110,6 +139,12 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
       <div className="max-w-md md:max-w-5xl mx-auto px-4 md:px-8 pt-8 md:pt-12">
+
+        {error && (
+          <div className="mb-6 rounded-lg bg-rose-100 text-rose-800 px-4 py-3 text-sm text-center">
+            {error}
+          </div>
+        )}
         
         {/* Month Navigation - Centered and constrained width */}
         <div className="flex justify-center mb-8">
@@ -155,6 +190,7 @@ function App() {
             <TransactionList 
                 transactions={currentMonthTransactions} 
                 onDelete={handleDeleteTransaction}
+                isLoading={isLoading}
             />
         </div>
       </div>
