@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 768">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f7a9a"/>
+      <stop offset="100%" stop-color="#14245b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="text" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a5f3fc"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+  </defs>
+  <rect width="768" height="768" rx="150" fill="url(#bg)"/>
+  <g transform="translate(100 120)">
+    <rect x="50" y="70" width="420" height="220" rx="28" fill="none" stroke="url(#accent)" stroke-width="28"/>
+    <path d="M80 250l104-140 120 110 164-198" fill="none" stroke="url(#accent)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M440 132l124 52-38-120" fill="url(#accent)"/>
+    <circle cx="476" cy="90" r="32" fill="#facc15"/>
+    <text x="448" y="110" font-size="120" fill="#facc15" font-family="Segoe UI, sans-serif">$</text>
+    <g transform="translate(80 320)">
+      <circle cx="170" cy="170" r="150" fill="none" stroke="url(#accent)" stroke-width="24"/>
+      <path d="M170 80v106l74 32" fill="none" stroke="url(#accent)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="120" y="142" width="170" height="104" rx="24" fill="none" stroke="url(#accent)" stroke-width="18"/>
+      <line x1="146" y1="186" x2="232" y2="186" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="258" cy="222" r="14" fill="url(#accent)"/>
+      <path d="M90 310l120-118 50 50 88-108" fill="none" stroke="url(#accent)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="40" y="570" font-size="86" fill="white" font-family="Segoe UI, sans-serif" letter-spacing="8">MONEY <tspan fill="url(#text)">TRACK</tspan></text>
+    <text x="44" y="635" font-size="48" fill="#dbeafe" font-family="Segoe UI, sans-serif">Your Financial Journey</text>
+  </g>
+</svg>
+
