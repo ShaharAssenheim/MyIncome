@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import appLogo from '/icon.svg';
 import { Transaction, IncomeType, MonthlyStats } from './types';
 import { MonthSelector } from './components/MonthSelector';
 import { SummaryCard } from './components/SummaryCard';
@@ -111,13 +110,6 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
       <div className="max-w-md md:max-w-5xl mx-auto px-4 md:px-8 pt-8 md:pt-12">
-        <div className="flex items-center justify-center gap-4 mb-10">
-          <img src={appLogo} alt="Money Track logo" className="w-16 h-16 rounded-3xl shadow-lg shadow-teal-500/30" />
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Money Track</p>
-            <p className="text-xl font-semibold text-slate-900">Your Financial Journey</p>
-          </div>
-        </div>
         
         {/* Month Navigation - Centered and constrained width */}
         <div className="flex justify-center mb-8">
