@@ -121,9 +121,9 @@ function LoginForm() {
   }, [accessToken, nextTarget]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4" dir="rtl">
       <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-3xl shadow-md border border-slate-100">
-        <h1 className="text-3xl font-bold text-slate-800 text-center">Welcome to MyIncome</h1>
+        <h1 className="text-3xl font-bold text-slate-800 text-center">ברוכים הבאים ל-MyIncome</h1>
         {error && (
           <div className="p-3 text-sm rounded-xl bg-rose-100 text-rose-700 text-center font-medium">
             {error}
@@ -132,7 +132,7 @@ function LoginForm() {
         {accessToken ? (
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm text-center">
-              Signing you in...
+              מתחבר...
             </div>
           </div>
         ) : (
@@ -144,43 +144,43 @@ function LoginForm() {
                 className="w-full py-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold text-slate-700 flex items-center justify-center gap-2"
               >
                 <SiGoogle className="text-[#4285F4]" size={18} />
-                <span className="inline-block">{mode === 'signup' ? 'Sign up with Google' : 'Log in with Google'}</span>
+                <span className="inline-block">{mode === 'signup' ? 'הרשמה עם Google' : 'התחברות עם Google'}</span>
               </button>
             )}
 
             <div className="flex items-center gap-4">
               <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-xs text-slate-400">OR</span>
+              <span className="text-xs text-slate-400">או</span>
               <div className="flex-1 h-px bg-slate-200" />
             </div>
 
             {mode === 'login' && !googleIdParam ? (
               <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium text-slate-600">Email</label>
+                  <label htmlFor="email" className="text-sm font-medium text-slate-600">אימייל</label>
                   <input
                     id="email"
                     type="email"
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    placeholder="Enter your email address"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 text-right"
+                    placeholder="הזן את כתובת האימייל שלך"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="password" className="text-sm font-medium text-slate-600">Password</label>
+                  <label htmlFor="password" className="text-sm font-medium text-slate-600">סיסמה</label>
                   <input
                     id="password"
                     type="password"
                     required
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    placeholder="Enter your password"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 text-right"
+                    placeholder="הזן את הסיסמה שלך"
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-start">
                   <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                     <input
                       type="checkbox"
@@ -188,7 +188,7 @@ function LoginForm() {
                       onChange={e => setStayLoggedIn(e.target.checked)}
                       className="h-4 w-4 rounded border-slate-300"
                     />
-                    Stay logged in for 7 days
+                    השאר אותי מחובר ל-7 ימים
                   </label>
                 </div>
                 <button
@@ -196,36 +196,36 @@ function LoginForm() {
                   disabled={loading}
                   className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-50"
                 >
-                  {loading ? 'Continue…' : 'Continue'}
+                  {loading ? 'ממשיך...' : 'המשך'}
                 </button>
                 <p className="text-xs text-slate-500 text-center">
-                  Don't have an account?{' '}
+                  אין לך חשבון?{' '}
                   <button type="button" onClick={() => setMode('signup')} className="font-semibold text-indigo-600 hover:text-indigo-500">
-                    Sign up
+                    הירשם
                   </button>
                 </p>
               </form>
             ) : googleIdParam ? (
               <form onSubmit={handleGoogleSignup} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-600">Google Email</label>
+                  <label className="text-sm font-medium text-slate-600">אימייל Google</label>
                   <input
                     type="email"
                     value={email}
                     disabled
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-500"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 text-right"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="username" className="text-sm font-medium text-slate-600">Username</label>
+                  <label htmlFor="username" className="text-sm font-medium text-slate-600">שם משתמש</label>
                   <input
                     id="username"
                     type="text"
                     required
                     value={username}
                     onChange={e => setUsername(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    placeholder="Choose a username"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 text-right"
+                    placeholder="בחר שם משתמש"
                   />
                 </div>
                 <button
@@ -233,51 +233,51 @@ function LoginForm() {
                   disabled={loading}
                   className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-50"
                 >
-                  {loading ? 'Creating…' : 'Finish Google Sign Up'}
+                  {loading ? 'יוצר...' : 'סיים הרשמה עם Google'}
                 </button>
                 <p className="text-xs text-slate-500 text-center">
-                  Already have an account?{' '}
+                  כבר יש לך חשבון?{' '}
                   <button type="button" onClick={() => setMode('login')} className="font-semibold text-indigo-600 hover:text-indigo-500">
-                    Log in
+                    התחבר
                   </button>
                 </p>
               </form>
             ) : (
               <form onSubmit={handleSignup} className="space-y-6">
                 <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium text-slate-600">Email</label>
+                  <label htmlFor="email" className="text-sm font-medium text-slate-600">אימייל</label>
                   <input
                     id="email"
                     type="email"
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    placeholder="Enter your email address"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 text-right"
+                    placeholder="הזן את כתובת האימייל שלך"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="username" className="text-sm font-medium text-slate-600">Username</label>
+                  <label htmlFor="username" className="text-sm font-medium text-slate-600">שם משתמש</label>
                   <input
                     id="username"
                     type="text"
                     required
                     value={username}
                     onChange={e => setUsername(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    placeholder="Choose a username"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 text-right"
+                    placeholder="בחר שם משתמש"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="password" className="text-sm font-medium text-slate-600">Password</label>
+                  <label htmlFor="password" className="text-sm font-medium text-slate-600">סיסמה</label>
                   <input
                     id="password"
                     type="password"
                     required
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    placeholder="Create a strong password"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 text-right"
+                    placeholder="צור סיסמה חזקה"
                   />
                 </div>
                 <button
@@ -285,12 +285,12 @@ function LoginForm() {
                   disabled={loading}
                   className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-50"
                 >
-                  {loading ? 'Creating…' : 'Create account'}
+                  {loading ? 'יוצר...' : 'צור חשבון'}
                 </button>
                 <p className="text-xs text-slate-500 text-center">
-                  Already have an account?{' '}
+                  כבר יש לך חשבון?{' '}
                   <button type="button" onClick={() => setMode('login')} className="font-semibold text-indigo-600 hover:text-indigo-500">
-                    Log in
+                    התחבר
                   </button>
                 </p>
               </form>
@@ -299,7 +299,7 @@ function LoginForm() {
         )}
         {!accessToken && (
           <p className="text-xs text-slate-400 text-center">
-            Passwords are hashed (bcrypt). Refresh token stored HttpOnly cookie.
+            סיסמאות מוצפנות (bcrypt). טוקן רענון נשמר ב-HttpOnly cookie.
           </p>
         )}
       </div>
