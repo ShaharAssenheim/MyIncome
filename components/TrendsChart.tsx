@@ -1,3 +1,4 @@
+"use client";
 import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Transaction, IncomeType } from '../types';
@@ -12,6 +13,8 @@ interface TrendsChartProps {
 
 export const TrendsChart: React.FC<TrendsChartProps> = ({ transactions, currentDate }) => {
   const [isLoading, setIsLoading] = useState(true);
+
+  const MotionDiv = motion.div as any;
 
   // Simulate loading effect when date changes to give a sense of data processing
   useEffect(() => {
@@ -102,7 +105,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ transactions, currentD
       <div className="h-[300px] w-full relative">
         <AnimatePresence mode="wait">
             {isLoading ? (
-                <motion.div 
+                <MotionDiv 
                     key="loading"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -118,9 +121,9 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ transactions, currentD
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer transform skew-x-12"></div>
                         </div>
                     ))}
-                </motion.div>
+                </MotionDiv>
             ) : (
-                <motion.div 
+                <MotionDiv 
                     key="chart"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -177,7 +180,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ transactions, currentD
                         />
                     </BarChart>
                     </ResponsiveContainer>
-                </motion.div>
+                </MotionDiv>
             )}
         </AnimatePresence>
       </div>

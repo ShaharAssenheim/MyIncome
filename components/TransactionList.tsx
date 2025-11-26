@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import { Transaction } from '../types';
 import { CATEGORIES, getCategoryIcon } from '../constants';
@@ -13,6 +14,8 @@ interface TransactionListProps {
 export const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelete, isLoading }) => {
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
+  const MotionDiv = motion.div as any;
+
   // Sort by created (newest first)
   const sortedTransactions = [...transactions].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -20,7 +23,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
 
   if (isLoading && sortedTransactions.length === 0) {
     return (
-      <motion.div 
+      <MotionDiv 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col items-center justify-center py-12 text-slate-400 bg-white/60 rounded-3xl border-2 border-slate-100 border-dashed"
@@ -29,13 +32,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
             <Clock size={32} className="opacity-50 text-slate-500" />
         </div>
         <p className="font-medium text-slate-500">טוען נתונים...</p>
-      </motion.div>
+      </MotionDiv>
     );
   }
 
   if (sortedTransactions.length === 0) {
     return (
-      <motion.div 
+      <MotionDiv 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col items-center justify-center py-12 text-slate-400 bg-white/60 rounded-3xl border-2 border-slate-100 border-dashed"
@@ -44,7 +47,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
             <Calendar size={32} className="opacity-50 text-slate-500" />
         </div>
         <p className="font-medium text-slate-500">לא נוספו תנועות החודש</p>
-      </motion.div>
+      </MotionDiv>
     );
   }
 
@@ -64,7 +67,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
             const isConfirming = confirmId === t.id;
             
             return (
-              <motion.div
+              <MotionDiv
                 key={t.id}
                 layout
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -111,7 +114,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                     <div className="flex items-center">
                         <AnimatePresence mode="wait">
                             {isConfirming ? (
-                                <motion.div 
+                                <MotionDiv 
                                     key="confirm"
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -139,9 +142,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                                     >
                                         <X size={18} strokeWidth={3} />
                                     </button>
-                                </motion.div>
+                                </MotionDiv>
                             ) : (
-                                <motion.div 
+                                <MotionDiv 
                                     key="actions"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
@@ -162,7 +165,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                                     >
                                         <Trash2 size={18} />
                                     </button>
-                                </motion.div>
+                                </MotionDiv>
                             )}
                         </AnimatePresence>
                     </div>
@@ -170,7 +173,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                  
                  {/* Decorative background glow for category */}
                  <div className={`absolute -right-6 -top-6 w-20 h-20 rounded-full opacity-[0.03] pointer-events-none ${config.iconColor.replace('text-', 'bg-')}`}></div>
-              </motion.div>
+              </MotionDiv>
             );
           })}
         </AnimatePresence>

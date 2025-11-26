@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Monthly Income App – Developer Guide</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-alt: #334155;
+      --text: #f1f5f9;
+      --accent: #6366f1;
+      --accent-glow: #818cf8;
+      --border: #475569;
+      --radius: 14px;
+      --code-bg: #0f1c30;
+      --danger: #ef4444;
+      --ok: #10b981;
+      --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h1,h2,h3,h4 { line-height:1.25; font-weight:600; }
+    h1 { font-size: clamp(2rem,5vw,3rem); margin:0 0 1rem; }
+    h2 { margin:3rem 0 1rem; position:relative; }
+    h2::after { content:""; display:block; width:60px; height:4px; background: linear-gradient(90deg,var(--accent),var(--accent-glow)); border-radius:2px; margin-top:8px; }
+    h3 { margin:2rem 0 0.75rem; }
+    p { margin:0 0 1rem; }
+    code, pre { font-family: "Fira Code", "Consolas", monospace; font-size: 14px; }
+    pre { background: var(--code-bg); padding:1rem 1.25rem; border:1px solid var(--border); border-radius: var(--radius); overflow:auto; margin:0 0 1.5rem; }
+    code { background: var(--code-bg); padding:0.2em 0.45em; border-radius:6px; border:1px solid var(--border); }
+    .container { max-width:1100px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+    .panel { background: linear-gradient(145deg,var(--panel),var(--panel-alt)); border:1px solid var(--border); padding:1.25rem 1.5rem; border-radius: var(--radius); margin:0 0 1.25rem; box-shadow:0 8px 20px -8px rgba(0,0,0,0.5); }
+    .panel.alt { background: linear-gradient(145deg,#1b2540,#24324d); }
+    .grid { display:grid; gap:1rem; }
+    .grid.cols-3 { grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); }
+    .grid.cols-2 { grid-template-columns: repeat(auto-fit,minmax(420px,1fr)); }
+    .tag { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; letter-spacing:.5px; background: var(--panel); padding:.4em .65em; border-radius:999px; border:1px solid var(--border); text-transform:uppercase; }
+    .table { width:100%; border-collapse:collapse; margin:0 0 2rem; }
+    .table th, .table td { padding:.65rem .85rem; text-align:left; border:1px solid var(--border); vertical-align: top; }
+    .table th { background: var(--panel-alt); font-weight:600; }
+    .callout { border-left:5px solid var(--accent); background: var(--panel); padding:1rem 1.25rem; border-radius:0 var(--radius) var(--radius) 0; margin:1.5rem 0; }
+    .callout.warn { border-left-color: var(--warn); }
+    .callout.danger { border-left-color: var(--danger); }
+    .callout.ok { border-left-color: var(--ok); }
+    .toc { display:flex; flex-wrap:wrap; gap:.6rem; margin:.75rem 0 2rem; }
+    .toc a { background: var(--panel); padding:.55em .9em; border-radius:8px; border:1px solid var(--border); font-size:.85rem; font-weight:600; letter-spacing:.5px; text-transform:uppercase; opacity:.85; }
+    .toc a:hover { opacity:1; box-shadow:0 0 0 2px var(--accent) inset; }
+    .code-inline-block { display:inline-block; }
+    footer { margin-top:4rem; font-size:.75rem; opacity:.6; }
+    .section-index { font-size:0.85rem; opacity:.6; font-weight:500; letter-spacing:1px; text-transform:uppercase; }
+    .hr { height:1px; background: linear-gradient(90deg,transparent,var(--border),transparent); margin:3rem 0; border:none; }
+    @media (max-width:700px) { .grid.cols-3 { grid-template-columns:1fr; } .grid.cols-2 { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Monthly Income App – Full Developer Guide</h1>
+      <p class="section-index">Version 1.0.0 • Frameworks: Next.js 14 • React 18 • TypeScript • TailwindCSS • Supabase • Framer Motion • Recharts • Lucide Icons</p>
+      <div class="callout ok"><strong>Goal:</strong> This document onboards a junior developer to understand architecture, stack choices, data flow, and how to extend or refactor the project safely.</div>
+    </header>
+
+    <nav class="toc" aria-label="Table of Contents">
+      <a href="#overview">Overview</a>
+      <a href="#stack">Technology Stack</a>
+      <a href="#arch">Architecture</a>
+      <a href="#files">File Reference</a>
+      <a href="#nextjs">Next.js Concepts</a>
+      <a href="#auth">Auth System</a>
+      <a href="#data-model">Data Model</a>
+      <a href="#supabase">Supabase Integration</a>
+      <a href="#components">UI Components</a>
+      <a href="#state-flow">State & Data Flow</a>
+      <a href="#styles">Styling & Design</a>
+      <a href="#animations">Animations</a>
+      <a href="#charts">Charts & Visualization</a>
+      <a href="#i18n-rtl">RTL & i18n</a>
+      <a href="#dev-env">Development Environment</a>
+      <a href="#extensibility">Extensibility Guide</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#roadmap">Roadmap Ideas</a>
+    </nav>
+
+    <h2 id="overview">1. Overview</h2>
+    <p>The <strong>Monthly Income App</strong> tracks and visualizes income grouped into three categories: Cash, Bit, and Bank Transfer. It stores transactions in a <code>Supabase</code> Postgres table, calculates monthly totals, displays distribution and trends, and provides an interactive UI with animation and responsive design.</p>
+    <div class="panel"><strong>High-Level Flow:</strong>
+      <ol>
+        <li>User opens the app (root route <code>/</code>) served by <code>app/page.tsx</code>.</li>
+        <li>Initial fetch loads all transactions from Supabase.</li>
+        <li>Client-side filtering derives current month list + statistics.</li>
+        <li>User adds/deletes transactions via modal & confirmation interactions.</li>
+        <li>Charts & summary recompute from local state.</li>
+      </ol>
+    </div>
+
+    <h2 id="stack">2. Technology Stack</h2>
+    <div class="grid cols-3">
+      <div class="panel"><span class="tag">Next.js 14</span><p>App Router architecture, server/client boundary, automatic code splitting, image/font optimization (not yet used), routing from <code>app/</code> directory.</p></div>
+      <div class="panel"><span class="tag">React 18</span><p>Modern hooks (<code>useState</code>, <code>useEffect</code>, <code>useMemo</code>, <code>useCallback</code>) for stateful UI. Potential for concurrent features & Suspense in future.</p></div>
+      <div class="panel"><span class="tag">TypeScript</span><p>Static types for safety: <code>IncomeType</code> enum, <code>Transaction</code> and <code>MonthlyStats</code> interfaces. Improves refactors and auto-completion.</p></div>
+      <div class="panel"><span class="tag">Supabase</span><p>Hosted Postgres + REST/Realtime + Auth (only DB used currently). Supabase client initialized with public URL + anon key.</p></div>
+      <div class="panel"><span class="tag">TailwindCSS</span><p>Utility-first styling enabling rapid UI iteration; custom gradients and responsive classes sprinkled across components.</p></div>
+      <div class="panel"><span class="tag">Framer Motion</span><p>Declarative animations: entrance transitions, hover scale effects, layout animations for transaction list.</p></div>
+      <div class="panel"><span class="tag">Recharts</span><p>Data visualization: stacked bar chart for trends, pie chart for category distribution with custom tooltips.</p></div>
+      <div class="panel"><span class="tag">Lucide Icons</span><p>Accessible, scalable icon set (<code>Wallet</code>, <code>Smartphone</code>, <code>Landmark</code>, etc.) for semantic UI cues.</p></div>
+      <div class="panel"><span class="tag">RTL Locale</span><p>App root <code>&lt;html lang="he" dir="rtl"&gt;</code> supporting Hebrew and right-to-left layout.</p></div>
+    </div>
+
+    <h2 id="arch">3. Architecture & Directory Layout</h2>
+    <pre><code>app/
+  layout.tsx        // Root HTML shell (metadata, rtl setup)
+  page.tsx          // Main page logic + orchestrates components
+components/
+  CategoryCard.tsx  // Displays category total + add action
+  MonthSelector.tsx // Navigates months, animated label
+  SummaryCard.tsx   // Pie chart + total headline
+  TransactionList.tsx // List + delete confirmation
+  TransactionModal.tsx // Add transaction form
+  TrendsChart.tsx   // 6 month stacked trend chart
+supabaseClient.ts   // Client initialization & env validation
+constants.tsx       // Category configuration + icon mapping
+types.ts            // TypeScript enums & interfaces
+public/             // Static assets + guide (this file)
+</code></pre>
+    <div class="callout"><strong>Principles:</strong> Keep domain logic (mapping, aggregation) inside page/component hooks; avoid premature abstraction. Promote clarity for juniors before introducing layers (e.g., repositories/services).</div>
+
+    <h2 id="files">3a. File-by-File Reference</h2>
+    <p>This section explains <strong>every file currently in the repository</strong> so a junior developer has zero ambiguity. Update whenever new files are added.</p>
+    <table class="table" aria-label="File Reference Table">
+      <thead>
+        <tr><th>Path / Name</th><th>Role</th><th>Key Points / Guidance</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>package.json</code></td>
+          <td>Project manifest</td>
+          <td>Scripts (<code>dev</code>, <code>build</code>, <code>start</code>). Dependencies: Next.js, React, Supabase, Tailwind, Framer Motion, Recharts, Lucide. Edit carefully; run <code>npm install</code> after changes.</td>
+        </tr>
+        <tr>
+          <td><code>package-lock.json</code></td>
+          <td>Dependency lock</td>
+          <td>Auto-generated precise tree. Delete with <code>node_modules</code> for a clean reinstall when resolving version conflicts.</td>
+        </tr>
+        <tr>
+          <td><code>next.config.js</code></td>
+          <td>Next.js config</td>
+          <td>Enables <code>reactStrictMode</code>, experimental <code>typedRoutes</code>. Extend here (images, redirects, headers) as needs grow.</td>
+        </tr>
+        <tr>
+          <td><code>tsconfig.json</code></td>
+          <td>TypeScript settings</td>
+          <td><code>NodeNext</code> module resolution. Path alias <code>@/*</code> to root. <code>strict</code> disabled (can enable later for stronger guarantees).</td>
+        </tr>
+        <tr>
+          <td><code>next-env.d.ts</code></td>
+          <td>Global Next types</td>
+          <td>Auto-generated by Next.js; never edit manually. Provides ambient types for framework features.</td>
+        </tr>
+        <tr>
+          <td><code>postcss.config.js</code></td>
+          <td>PostCSS pipeline</td>
+          <td>Loads <code>tailwindcss</code> + <code>autoprefixer</code>. Add plugins (nesting, typography) if design system expands.</td>
+        </tr>
+        <tr>
+          <td><code>tailwind.config.js</code></td>
+          <td>Tailwind config</td>
+          <td>Content globs ensure purge includes <code>app/</code>, <code>components/</code>, and local TS/TSX files. Extend theme for custom spacing/colors/fonts.</td>
+        </tr>
+        <tr>
+          <td><code>supabaseClient.ts</code></td>
+          <td>Supabase initialization</td>
+          <td>Validates required env vars; throws early if missing. Exports a singleton client for DB interaction.</td>
+        </tr>
+        <tr>
+          <td><code>types.ts</code></td>
+          <td>Domain models</td>
+          <td>Defines <code>IncomeType</code>, <code>Transaction</code>, <code>MonthlyStats</code>, <code>CategoryConfig</code>. Adjust these before touching UI logic.</td>
+        </tr>
+        <tr>
+          <td><code>constants.tsx</code></td>
+          <td>Category configuration</td>
+          <td>Static mapping from enum to display properties (Hebrew labels, colors, gradients, icon color). Provides <code>getCategoryIcon()</code>.</td>
+        </tr>
+        <tr>
+          <td><code>css.d.ts</code></td>
+          <td>CSS import typing</td>
+          <td>Declares <code>module '*.css'</code> to silence TS errors for global CSS imports in App Router.</td>
+        </tr>
+        <tr>
+          <td><code>README.md</code></td>
+          <td>Project overview</td>
+          <td>Concise setup instructions, DB schema. Direct new contributors here first, then this guide for depth.</td>
+        </tr>
+        <tr>
+          <td><code>public/project-guide.html</code></td>
+          <td>Developer guide</td>
+          <td>Comprehensive onboarding doc (this file). Served statically at <code>/project-guide.html</code>. Keep in sync with changes.</td>
+        </tr>
+        <tr>
+          <td><code>app/globals.css</code></td>
+          <td>Global styles</td>
+          <td>Tailwind layer directives + base html/body styling (font, RTL direction). Extend with variables for theming later.</td>
+        </tr>
+        <tr>
+          <td><code>app/layout.tsx</code></td>
+          <td>Root layout</td>
+          <td>Defines HTML skeleton, language (<code>he</code>), direction (<code>rtl</code>), metadata. Add providers (auth/theme/state) here.</td>
+        </tr>
+        <tr>
+          <td><code>app/page.tsx</code></td>
+          <td>Main page</td>
+          <td>Central orchestrator: fetches all transactions, filters by month, computes stats, renders child components. Refactor heavy logic into custom hooks as complexity grows.</td>
+        </tr>
+        <tr>
+          <td><code>components/CategoryCard.tsx</code></td>
+          <td>Category summary card</td>
+          <td>Shows total for a category; interactive add action; motion effects on mount/hover for engagement.</td>
+        </tr>
+        <tr>
+          <td><code>components/MonthSelector.tsx</code></td>
+          <td>Month navigation UI</td>
+          <td>Handles previous/next month changes; animates label with direction-aware motion; respects RTL layout.</td>
+        </tr>
+        <tr>
+          <td><code>components/SummaryCard.tsx</code></td>
+          <td>Monthly aggregate</td>
+          <td>Displays total income; conditional pie chart with legend/tooltips. Placeholder icon when no data.</td>
+        </tr>
+        <tr>
+          <td><code>components/TransactionList.tsx</code></td>
+          <td>Transactions display</td>
+          <td>Sorted by creation date (newest first). Delete confirmation overlay; animations via <code>AnimatePresence</code>.</td>
+        </tr>
+        <tr>
+          <td><code>components/TransactionModal.tsx</code></td>
+          <td>Add form modal</td>
+          <td>Captures amount & optional description. Basic validation; enhance with schema & error messaging later.</td>
+        </tr>
+        <tr>
+          <td><code>components/TrendsChart.tsx</code></td>
+          <td>Trend visualization</td>
+          <td>Constructs six-month stacked bar dataset; simulated loading to improve perceived performance.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout ok"><strong>Tip:</strong> If unsure where something originates, trace from <code>app/page.tsx</code> downward, checking props and types in <code>types.ts</code>.</div>
+
+    <h2 id="nextjs">4. Core Next.js Concepts (App Router)</h2>
+    <ul>
+      <li><strong>App Directory:</strong> Routing derives from folder structure. <code>app/page.tsx</code> = root route.</li>
+      <li><strong>Layouts:</strong> <code>app/layout.tsx</code> wraps all pages; use for HTML, fonts, providers, direction.</li>
+      <li><strong>Server vs Client:</strong> Files with <code>"use client"</code> run in browser. All components here are client-side due to interactive state & Supabase JS usage.</li>
+      <li><strong>Metadata Export:</strong> <code>export const metadata = {...}</code> centralizes SEO meta.</li>
+      <li><strong>Data Fetching:</strong> Current approach: client fetch on mount. Could migrate to <code>server actions</code> or <code>Route Handlers</code> for SSR.</li>
+      <li><strong>Env Exposure:</strong> Only vars prefixed with <code>NEXT_PUBLIC_</code> accessible client-side.</li>
+    </ul>
+    <div class="callout warn"><strong>Future SSR Opportunity:</strong> Preload initial transactions server-side to reduce first contentful paint and improve SEO if public.</div>
+
+    <h2 id="data-model">5. Data Model & Types</h2>
+    <pre><code>enum IncomeType { CASH, BIT, BANK }
+interface Transaction {
+  id: string; amount: number; type: IncomeType;
+  date: string; description?: string; createdAt: string;
+}
+interface MonthlyStats { total: number; cash: number; bit: number; bank: number; }
+</code></pre>
+    <p><strong>Notes:</strong> Both <code>date</code> and <code>createdAt</code> stored as ISO strings; transaction creation payload uses <code>created_at</code> (DB column) while mapping to <code>createdAt</code> in code for consistency.</p>
+
+    <h2 id="supabase">6. Supabase Integration</h2>
+    <pre><code>const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+</code></pre>
+    <ul>
+      <li><strong>Runtime Validation:</strong> Throws explicit error if env variables missing.</li>
+      <li><strong>CRUD:</strong> <code>.from('transactions').select('*')</code>, <code>.insert()</code>, <code>.delete()</code>.</li>
+      <li><strong>Security:</strong> Only anon key used (public access). Add Row Level Security + policies for production.</li>
+    </ul>
+    <div class="callout danger"><strong>Warning:</strong> Never expose service role key client-side. Always restrict write policies if deploying publicly.</div>
+
+    <h2 id="components">7. Component Reference</h2>
+    <table class="table" aria-label="Component Reference Table">
+      <thead><tr><th>Component</th><th>Purpose</th><th>Key Props / Hooks</th><th>Enhancement Ideas</th></tr></thead>
+      <tbody>
+        <tr><td><code>CategoryCard</code></td><td>Show category total & open add modal</td><td><code>type</code>, <code>amount</code>, <code>onAddClick</code></td><td>Accessible keyboard activation; skeleton while loading</td></tr>
+        <tr><td><code>MonthSelector</code></td><td>Navigate months (RTL aware)</td><td><code>currentDate</code>, handlers</td><td>Disable future months; add jump menu</td></tr>
+        <tr><td><code>SummaryCard</code></td><td>Total + pie distribution</td><td><code>stats</code></td><td>Export data CSV; add legend tooltips</td></tr>
+        <tr><td><code>TransactionModal</code></td><td>Create transaction</td><td><code>onSave</code>, controlled inputs</td><td>Form validation schema; optimistic updates rollback</td></tr>
+        <tr><td><code>TransactionList</code></td><td>List + delete confirmation</td><td><code>transactions</code>, <code>onDelete</code></td><td>Virtualization for large lists</td></tr>
+        <tr><td><code>TrendsChart</code></td><td>6 month stacked bars</td><td><code>transactions</code>, <code>currentDate</code></td><td>Toggle line view; smoothing; real-time transitions</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="state-flow">8. State & Data Flow</h2>
+    <ol>
+      <li><strong>Raw Data:</strong> <code>transactions</code> state holds full dataset.</li>
+      <li><strong>Derived Month:</strong> <code>currentMonthTransactions = transactions.filter(...)</code>.</li>
+      <li><strong>Aggregations:</strong> <code>stats = reduce(currentMonthTransactions)</code> generating totals.</li>
+      <li><strong>UI Bind:</strong> Cards, charts consume <code>stats</code> & filtered lists.</li>
+      <li><strong>Mutations:</strong> Insert/delete update Supabase then patch local state (no refetch currently).</li>
+    </ol>
+    <div class="panel alt"><strong>Why Derive Locally?</strong> Minimizes DB round-trips; keeps mental model simple for beginners. Tradeoff: memory grows with dataset (could paginate later).</div>
+
+    <h2 id="styles">9. Styling & Design System</h2>
+    <ul>
+      <li><strong>Utility Classes:</strong> Tailwind used directly (e.g., <code>rounded-3xl</code>, <code>bg-gradient-to-br</code>).</li>
+      <li><strong>Category Theme:</strong> Colors defined in <code>constants.tsx</code>: semantic mapping for backgrounds/icon colors.</li>
+      <li><strong>Global CSS:</strong> Minimal baseline in <code>app/globals.css</code> (not listed above but present).</li>
+      <li><strong>Consistency:</strong> Repeated patterns (cards) rely on gradient + shadow combos.</li>
+    </ul>
+    <div class="callout"><strong>Improvement:</strong> Migrate repeated gradient/color logic to a token system or CSS variables for theme toggling.</div>
+
+    <h2 id="animations">10. Animation Strategy (Framer Motion)</h2>
+    <ul>
+      <li><strong>Entrance:</strong> Cards fade & spring upward on mount (<code>initial</code>/<code>animate</code> props).</li>
+      <li><strong>Interaction Feedback:</strong> Hover <code>scale</code>/<code>y</code> shifts create tactile feel.</li>
+      <li><strong>List Layout:</strong> TransactionList uses <code>AnimatePresence</code> for smooth add/remove transitions.</li>
+      <li><strong>Temporal Loading:</strong> Trends chart fakes processing time for perception management (<code>setTimeout</code>).</li>
+    </ul>
+    <div class="callout warn"><strong>Performance Note:</strong> Excessive motion variants can impact low-end devices; consider reducing spring stiffness for accessibility.</div>
+
+    <h2 id="charts">11. Charts & Visualization (Recharts)</h2>
+    <p><strong>Summary Pie:</strong> Only categories with value &gt; 0 displayed; custom tooltip formats ILS currency.</p>
+    <p><strong>Trends Bar:</strong> Stacked bars represent category composition over six months; <code>useMemo</code> precomputes data array.</p>
+    <pre><code>{ name: 'Jan', CASH: 1200, BIT: 300, BANK: 900, total: 2400 }</code></pre>
+    <div class="callout"><strong>Extension:</strong> Add moving average line, enable dynamic range selection, or integrate <code>react-aria</code> tooling for accessible SVG annotations.</div>
+
+    <h2 id="i18n-rtl">12. RTL & Internationalization</h2>
+    <ul>
+      <li><strong>Root Direction:</strong> <code>&lt;html lang="he" dir="rtl"&gt;</code> ensures layout reversal.</li>
+      <li><strong>Date Formatting:</strong> <code>Intl.DateTimeFormat('he-IL')</code> for Hebrew month names.</li>
+      <li><strong>Currency:</strong> <code>Intl.NumberFormat('he-IL',{currency:'ILS'})</code> for shekel formatting.</li>
+      <li><strong>Text Content:</strong> Hebrew labels embedded directly in components.</li>
+    </ul>
+    <div class="callout warn"><strong>Next Step:</strong> Introduce a translation layer (e.g., <code>next-intl</code>) to externalize strings & enable multi-language support.</div>
+
+    <h2 id="dev-env">13. Development Environment & Scripts</h2>
+    <table class="table"><thead><tr><th>Script</th><th>Purpose</th><th>Notes</th></tr></thead><tbody>
+      <tr><td><code>npm run dev</code></td><td>Start development server</td><td>Hot module reload, fast refresh</td></tr>
+      <tr><td><code>npm run build</code></td><td>Production compile</td><td>Generates optimized <code>.next/</code></td></tr>
+      <tr><td><code>npm run start</code></td><td>Run production build</td><td>Use after <code>build</code></td></tr>
+    </tbody></table>
+    <div class="panel"><strong>Environment Variables (in <code>.env.local</code>):</strong>
+      <pre><code>NEXT_PUBLIC_SUPABASE_URL=...\nNEXT_PUBLIC_SUPABASE_ANON_KEY=...</code></pre>
+      <p>Restart dev server after changes; Next.js loads at boot.</p>
+    </div>
+
+    <h2 id="extensibility">14. Extensibility & Refactor Guidelines</h2>
+    <div class="grid cols-2">
+      <div class="panel">
+        <h3>Data Layer Improvements</h3>
+        <ul>
+          <li>Create <code>lib/transactions.ts</code> for fetch/insert/delete wrappers.</li>
+          <li>Use <code>react-query</code> or <code>@tanstack/query</code> for cache + invalidation.</li>
+          <li>Add optimistic updates with rollback on failure.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Domain Modeling</h3>
+        <ul>
+          <li>Separate raw DB shapes from UI models.</li>
+          <li>Introduce <code>Result&lt;T,E&gt;</code> pattern for error handling.</li>
+          <li>Consider zod schemas for runtime validation.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>UI/Design System</h3>
+        <ul>
+          <li>Create reusable <code>&lt;Card /&gt;</code>, <code>&lt;Button /&gt;</code>, <code>&lt;Modal /&gt;</code> primitives.</li>
+          <li>Integrate dark mode with CSS variables.</li>
+          <li>Accessibility audits (focus states, ARIA labels).</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Performance</h3>
+        <ul>
+          <li>Paginate transactions (virtual list when large).</li>
+          <li>Memoize heavy charts; lazy load Recharts bundle.</li>
+          <li>Static prefetch: server render initial dataset.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 id="troubleshooting">15. Troubleshooting</h2>
+    <table class="table"><thead><tr><th>Issue</th><th>Cause</th><th>Fix</th></tr></thead><tbody>
+      <tr><td>Env error thrown</td><td>Missing Supabase vars</td><td>Create <code>.env.local</code> with required keys</td></tr>
+      <tr><td>No transactions displayed</td><td>Empty table or fetch failure</td><td>Check browser console & Supabase policies</td></tr>
+      <tr><td>Wrong totals</td><td>Bad enum value</td><td>Validate <code>type</code> matches <code>IncomeType</code></td></tr>
+      <tr><td>Chart flicker</td><td>Rapid state changes</td><td>Debounce month change or disable loading effect</td></tr>
+      <tr><td>Slow initial load</td><td>Client fetch delay</td><td>Move fetch server-side or implement caching</td></tr>
+    </tbody></table>
+
+    <h2 id="roadmap">16. Roadmap Ideas</h2>
+    <ul>
+      <li>Authentication & per-user data isolation.</li>
+      <li>Export/Import transactions (CSV/JSON).</li>
+      <li>Recurring income templates.</li>
+      <li>Tagging system + filters.</li>
+      <li>Mobile PWA manifest & offline-first caching.</li>
+      <li>Automated tests (unit + integration + visual regression).</li>
+    </ul>
+      <h2 id="auth">17. Authentication System (Added)</h2>
+      <p>A custom JWT-based authentication layer has been added. It supports email/password and Google OAuth, short-lived access tokens (15m), refresh tokens (7–14d) stored as HttpOnly cookies, rotation on refresh, and revocation on logout.</p>
+      <h3>Database Schema (Supabase)</h3>
+      <pre><code>-- Users table
+  create table if not exists public.auth_users (
+    id uuid primary key default gen_random_uuid(),
+    email text not null unique,
+    username text not null,
+    password_hash text not null,
+    google_id text unique,
+    created_at timestamptz default now()
+  );
+
+  -- Refresh tokens table (hashed tokens)
+  create table if not exists public.auth_refresh_tokens (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references public.auth_users(id) on delete cascade,
+    token_hash text not null,
+    expires_at timestamptz not null,
+    created_at timestamptz default now()
+  );
+
+  create index if not exists idx_auth_refresh_user on public.auth_refresh_tokens(user_id);
+
+  -- Recommended Row Level Security policies (example skeleton)
+  -- alter table public.auth_users enable row level security;
+  -- alter table public.auth_refresh_tokens enable row level security;
+  -- (Policies omitted for brevity; service role key used server-side.)
+  </code></pre>
+      <p><strong>Service Role Key:</strong> Add <code>SUPABASE_SERVICE_ROLE_KEY</code> to <code>.env.local</code> for server-side user & token persistence (never expose to client). Client uses existing anon key only for public data (transactions).</p>
+      <table class="table" aria-label="Auth Endpoints">
+        <thead><tr><th>Endpoint</th><th>Method</th><th>Purpose</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/auth/register</code></td><td>POST</td><td>Create new user</td><td>Body: <code>{ email, username, password }</code>. Returns access token + sets refresh cookie.</td></tr>
+          <tr><td><code>/api/auth/login</code></td><td>POST</td><td>Authenticate user</td><td>Body: <code>{ email, password, stayLoggedIn }</code>. Refresh TTL 7d or 14d based on checkbox.</td></tr>
+          <tr><td><code>/api/auth/google</code></td><td>GET</td><td>OAuth flow & callback</td><td>No code param: redirects to Google. With code: exchanges tokens, issues local JWTs.</td></tr>
+          <tr><td><code>/api/auth/refresh</code></td><td>POST</td><td>Rotate refresh & new access</td><td>Requires valid refresh cookie. Returns new access token + rotated refresh cookie.</td></tr>
+          <tr><td><code>/api/auth/logout</code></td><td>POST</td><td>Logout & revoke</td><td>Deletes refresh cookie and revokes token (hash comparison).</td></tr>
+        </tbody>
+      </table>
+      <h3>Token Lifecycle</h3>
+      <ol>
+        <li><strong>Login/Register:</strong> Access (15m) returned in JSON. Refresh (7–14d) stored HttpOnly cookie.</li>
+        <li><strong>Usage:</strong> Client sends <code>Authorization: Bearer &lt;access&gt;</code> to protected routes.</li>
+        <li><strong>Expiry:</strong> On 401, client calls <code>/api/auth/refresh</code> to get new access + rotated refresh cookie.</li>
+        <li><strong>Logout:</strong> Revokes stored refresh token hashes & clears cookie.</li>
+      </ol>
+      <h3>Security Measures</h3>
+      <ul>
+        <li><strong>Password Hashing:</strong> bcrypt (12 rounds).</li>
+        <li><strong>Refresh Token Storage:</strong> Hashed before saving (prevents raw token leaks).</li>
+        <li><strong>Rotation:</strong> Old refresh token revoked on refresh (protects against replay).</li>
+        <li><strong>Cookie Flags:</strong> <code>HttpOnly</code>, <code>Secure</code> (production), <code>SameSite=lax</code>.</li>
+      </ul>
+      <h3>Client Hook</h3>
+      <p><code>lib/auth/useAuth.ts</code> offers <code>login</code>, <code>logout</code>, <code>refresh</code>, and <code>fetchWithAuth</code> for auto-renewing access tokens. Access token is kept only in memory (not localStorage) to reduce XSS risk.</p>
+      <h3>Middleware</h3>
+      <p><code>middleware.ts</code> validates access tokens for routes under <code>/api/secure/*</code>. Adjust the <code>matcher</code> to protect additional paths.</p>
+      <h3>Google OAuth Flow</h3>
+      <ol>
+        <li>User clicks "Login with Google" which navigates to <code>/api/auth/google</code>.</li>
+        <li>Route redirects to Google authorization endpoint.</li>
+        <li>Google calls back with <code>?code=...</code> to same route.</li>
+        <li>Server exchanges code → Google access token, fetches profile.</li>
+        <li>User created (if new). Local access + refresh tokens issued; refresh cookie set.</li>
+        <li>Redirect back to <code>/login#access_token=...</code> to place access token in memory.</li>
+      </ol>
+      <h3>Environment Variables</h3>
+      <pre><code>APP_URL=http://localhost:3000
+  JWT_ACCESS_SECRET=...
+  JWT_REFRESH_SECRET=...
+  GOOGLE_CLIENT_ID=...
+  GOOGLE_CLIENT_SECRET=...
+  </code></pre>
+      <div class="callout warn"><strong>Production Notes:</strong> Replace in-memory DB with persistent storage (Postgres/Prisma). Enforce stronger validation (zod), enable HTTPS, implement rate limiting, and consider storing multiple device sessions distinctly.</div>
+
+    <hr class="hr" />
+    <footer>
+      <p>Monthly Income App – Developer Guide. Internal educational resource. Update this file as architecture evolves. Last generated: <script>document.write(new Date().toISOString().substring(0,10));</script></p>
+    </footer>
+  </div>
+</body>
+</html>

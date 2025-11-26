@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Check } from 'lucide-react';
 import { IncomeType } from '../types';
@@ -82,10 +83,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, type
                 placeholder="0"
                 min="1"
                 step="any"
-                className="w-full text-4xl font-bold text-slate-800 placeholder:text-slate-200 border-b-2 border-slate-100 py-2 focus:outline-none focus:border-slate-300 bg-transparent transition-colors"
+                className="w-full text-4xl font-bold text-slate-800 placeholder:text-slate-200 border-b-2 border-slate-100 py-2 pr-10 text-right focus:outline-none focus:border-slate-300 bg-transparent transition-colors"
                 required
               />
-              <span className="absolute left-0 bottom-4 text-xl font-medium text-slate-400">
+              <span className="absolute right-0 bottom-4 text-xl font-medium text-slate-400">
                 ₪
               </span>
             </div>
@@ -101,7 +102,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, type
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="לדוגמה: מתנה מסבתא"
-              className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all"
+              className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-right placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all"
             />
           </div>
 

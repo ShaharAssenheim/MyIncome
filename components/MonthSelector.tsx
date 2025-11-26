@@ -1,3 +1,4 @@
+"use client";
 import React, { useRef, useEffect, useState } from 'react';
 import { ChevronRight, ChevronLeft, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,10 +11,15 @@ interface MonthSelectorProps {
 
 export const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onPrevMonth, onNextMonth }) => {
   const formattedDate = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' }).format(currentDate);
+  const isRTL = typeof document !== 'undefined' && document.documentElement.dir === 'rtl';
+  const directionMultiplier = isRTL ? -1 : 1;
   
   // Track direction for animation
   const prevDateRef = useRef(currentDate);
   const [direction, setDirection] = useState(0);
+
+  const MotionButton = motion.button as any;
+  const MotionDiv = motion.div as any;
 
   useEffect(() => {
     if (currentDate.getTime() > prevDateRef.current.getTime()) {
@@ -26,7 +32,7 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onPre
 
   const variants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? -50 : 50,
+      x: direction > 0 ? -50 * directionMultiplier : 50 * directionMultiplier,
       opacity: 0,
       scale: 0.95
     }),
@@ -36,7 +42,7 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onPre
       scale: 1
     },
     exit: (direction: number) => ({
-      x: direction > 0 ? 50 : -50,
+      x: direction > 0 ? 50 * directionMultiplier : -50 * directionMultiplier,
       opacity: 0,
       scale: 0.95
     })
@@ -44,7 +50,7 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onPre
 
   return (
     <div className="flex items-center justify-between bg-white p-2 rounded-2xl shadow-sm border border-slate-100 mb-6">
-      <motion.button 
+      <MotionButton 
         whileHover={{ scale: 1.1, backgroundColor: "#f1f5f9" }}
         whileTap={{ scale: 0.9 }}
         onClick={onPrevMonth}
@@ -52,11 +58,11 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onPre
         aria-label="חודש קודם"
       >
         <ChevronRight size={24} />
-      </motion.button>
+      </MotionButton>
       
       <div className="flex-1 relative h-10 overflow-hidden">
         <AnimatePresence initial={false} custom={direction} mode="popLayout">
-          <motion.div
+          <MotionDiv
             key={formattedDate} // Key change triggers animation
             custom={direction}
             variants={variants}
@@ -72,11 +78,11 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onPre
             <h2 className="text-xl font-bold text-slate-800 capitalize select-none whitespace-nowrap">
               {formattedDate}
             </h2>
-          </motion.div>
+          </MotionDiv>
         </AnimatePresence>
       </div>
 
-      <motion.button 
+      <MotionButton 
         whileHover={{ scale: 1.1, backgroundColor: "#f1f5f9" }}
         whileTap={{ scale: 0.9 }}
         onClick={onNextMonth}
@@ -84,7 +90,7 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onPre
         aria-label="חודש הבא"
       >
         <ChevronLeft size={24} />
-      </motion.button>
+      </MotionButton>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+"use client";
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -15,8 +16,17 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ type, amount, onAddC
   const config = CATEGORIES[type];
   const formattedAmount = new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 }).format(amount);
 
+  const cardClasses = `
+    relative overflow-hidden rounded-3xl p-6 md:p-8 border transition-shadow duration-300 
+    bg-gradient-to-br ${config.bgStart} ${config.bgEnd} 
+    border-white shadow-sm hover:shadow-xl group cursor-pointer
+    h-full flex flex-col justify-between
+  `;
+
+  const MotionDiv = motion.div as any;
+
   return (
-    <motion.div 
+    <MotionDiv
       initial={{ opacity: 0, y: 20 }}
       animate={{ 
         opacity: 1, 
@@ -29,12 +39,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ type, amount, onAddC
         transition: { duration: 0.2, type: "spring", stiffness: 300 }
       }}
       whileTap={{ scale: 0.98 }}
-      className={`
-        relative overflow-hidden rounded-3xl p-6 md:p-8 border transition-shadow duration-300 
-        bg-gradient-to-br ${config.bgStart} ${config.bgEnd} 
-        border-white shadow-sm hover:shadow-xl group cursor-pointer
-        h-full flex flex-col justify-between
-      `}
+      className={cardClasses}
       onClick={() => onAddClick(type)}
     >
       <div className="flex justify-between items-start mb-6 md:mb-8 relative z-10">
@@ -72,6 +77,6 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ type, amount, onAddC
       `}>
          {getCategoryIcon(type, 140)}
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 };
