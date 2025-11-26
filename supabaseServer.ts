@@ -2,6 +2,8 @@
 // Requires SUPABASE_SERVICE_ROLE_KEY (never expose to client) + NEXT_PUBLIC_SUPABASE_URL.
 import { createClient } from '@supabase/supabase-js';
 
+export const runtime = 'nodejs';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string | undefined;
 

@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import { verifyRefreshToken } from '../../../../lib/auth/jwt';
+
+export const runtime = 'nodejs';
 import { validateRefreshToken } from '../../../../lib/auth/db.supabase';
 
 export async function GET(req: NextRequest) {

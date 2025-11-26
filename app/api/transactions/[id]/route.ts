@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import supabaseServer from '../../../../supabaseServer';
 
+export const runtime = 'nodejs';
+
 // PUT /api/transactions/[id] - Update a transaction
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const userId = req.headers.get('x-user-id');

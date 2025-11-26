@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createUser, findByEmail, addRefreshToken } from '../../../../lib/auth/db.supabase';
+
+export const runtime = 'nodejs';
 import { hashPassword } from '../../../../lib/auth/hash';
 import { signAccessToken, signRefreshToken } from '../../../../lib/auth/jwt';
 import cookie from 'cookie';

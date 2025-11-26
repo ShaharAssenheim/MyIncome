@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SiGoogle } from 'react-icons/si';
 
@@ -9,7 +9,7 @@ interface LoginResponse {
   error?: string;
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -304,5 +304,25 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-full max-w-md p-8">
+          <div className="bg-white p-8 rounded-3xl shadow-md border border-slate-100">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-slate-200 rounded w-3/4 mx-auto"></div>
+              <div className="h-12 bg-slate-100 rounded"></div>
+              <div className="h-12 bg-slate-100 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }

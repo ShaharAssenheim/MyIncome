@@ -3,6 +3,8 @@ import type { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import cookie from 'cookie';
 
+export const runtime = 'nodejs';
+
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const OAUTH_STATE_COOKIE = 'google_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60; // 10 minutes

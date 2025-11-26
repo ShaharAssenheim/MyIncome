@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import supabaseServer from '../../../supabaseServer';
 
+export const runtime = 'nodejs';
+
 // GET /api/shares - List all shares (who you shared with and who shared with you)
 export async function GET(req: NextRequest) {
   const userId = req.headers.get('x-user-id');

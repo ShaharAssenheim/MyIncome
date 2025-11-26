@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import supabaseServer from '../../../../supabaseServer';
 
+export const runtime = 'nodejs';
+
 // DELETE /api/shares/[id] - Remove a share
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const userId = req.headers.get('x-user-id');
