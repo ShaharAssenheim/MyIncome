@@ -3,6 +3,9 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SiGoogle } from 'react-icons/si';
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 interface LoginResponse {
   accessToken: string;
   user: { id: string; email: string; username: string };

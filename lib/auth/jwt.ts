@@ -1,5 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 
+export const runtime = 'nodejs';
+
 // Access tokens: short-lived (15m). Refresh tokens: long-lived (7-14d).
 // Secrets must be provided via environment variables.
 const ACCESS_SECRET = new TextEncoder().encode(process.env.JWT_ACCESS_SECRET);

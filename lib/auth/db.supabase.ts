@@ -1,6 +1,8 @@
 import supabaseServer from '../../supabaseServer';
 import { hashToken, verifyToken } from './hash';
 
+export const runtime = 'nodejs';
+
 export interface UserRecord {
   id: string;
   email: string;
