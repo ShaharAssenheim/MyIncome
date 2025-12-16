@@ -12,11 +12,20 @@ export async function POST(req: NextRequest) {
   try {
     // CSRF: require header token for cookie-auth endpoint
     const csrfHeader = req.headers.get('x-csrf-token');
-    try { await requireCsrf(csrfHeader); } catch { return Response.json({ error: 'Invalid CSRF' }, { status: 403 }); }
+    try { 
+      await requireCsrf(csrfHeader); 
+    } catch (e) { 
+      console.error('[refresh] CSRF validation failed:', e instanceof Error ? e.message : e);
+      console.error('[refresh] CSRF header:', csrfHeader);
+      return Response.json({ error: 'Invalid CSRF' }, { status: 403 }); 
+    }
     const cookieHeader = req.headers.get('cookie') || '';
     const parsed = cookie.parse(cookieHeader);
     const existingRefresh = parsed['refresh_token'];
-    if (!existingRefresh) return Response.json({ error: 'Missing refresh token' }, { status: 401 });
+    if (!existingRefresh) {
+      console.error('[refresh] No refresh token in cookies. Cookie header:', cookieHeader);
+      return Response.json({ error: 'Missing refresh token' }, { status: 401 });
+    }
 
     const decoded = await verifyRefreshToken(existingRefresh);
     if (!decoded) return Response.json({ error: 'Invalid refresh token' }, { status: 401 });

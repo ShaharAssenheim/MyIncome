@@ -19,7 +19,11 @@ export async function issueCsrfToken(): Promise<string> {
 export async function verifyCsrf(headerToken: string | null): Promise<boolean> {
   const cookieStore = await cookies();
   const cookieToken = cookieStore.get(CSRF_COOKIE)?.value;
-  return Boolean(headerToken && cookieToken && headerToken === cookieToken);
+  const isValid = Boolean(headerToken && cookieToken && headerToken === cookieToken);
+  if (!isValid) {
+    console.error('[CSRF] Verification failed. Header:', headerToken?.substring(0, 10) + '...', 'Cookie:', cookieToken?.substring(0, 10) + '...');
+  }
+  return isValid;
 }
 
 export async function requireCsrf(headerToken: string | null) {
