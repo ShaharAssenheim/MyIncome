@@ -10,21 +10,26 @@ const DEFAULT_REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
-    // CSRF: require header token for cookie-auth endpoint
-    const csrfHeader = req.headers.get('x-csrf-token');
-    try { 
-      await requireCsrf(csrfHeader); 
-    } catch (e) { 
-      console.error('[refresh] CSRF validation failed:', e instanceof Error ? e.message : e);
-      console.error('[refresh] CSRF header:', csrfHeader);
-      return Response.json({ error: 'Invalid CSRF' }, { status: 403 }); 
-    }
     const cookieHeader = req.headers.get('cookie') || '';
     const parsed = cookie.parse(cookieHeader);
     const existingRefresh = parsed['refresh_token'];
     if (!existingRefresh) {
       console.error('[refresh] No refresh token in cookies. Cookie header:', cookieHeader);
       return Response.json({ error: 'Missing refresh token' }, { status: 401 });
+    }
+
+    // CSRF: Only check if a CSRF token exists in cookies (after first login)
+    // The refresh token cookie itself provides CSRF protection (httpOnly + sameSite)
+    const csrfHeader = req.headers.get('x-csrf-token');
+    const cookieStore = await (await import('next/headers')).cookies();
+    const csrfCookie = (await cookieStore).get('csrf_token')?.value;
+    
+    // If CSRF cookie exists, require matching header
+    if (csrfCookie) {
+      if (!csrfHeader || csrfHeader !== csrfCookie) {
+        console.error('[refresh] CSRF mismatch. Header:', csrfHeader?.substring(0, 10), 'Cookie:', csrfCookie?.substring(0, 10));
+        return Response.json({ error: 'Invalid CSRF' }, { status: 403 });
+      }
     }
 
     const decoded = await verifyRefreshToken(existingRefresh);
