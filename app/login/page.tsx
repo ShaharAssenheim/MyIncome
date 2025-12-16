@@ -117,7 +117,7 @@ function LoginForm() {
     if (accessToken) {
       const nextTargetNormalized = nextTarget.startsWith('/') ? nextTarget : `/${nextTarget}`;
       // Use router.push for faster navigation (no full page reload)
-      router.push(nextTargetNormalized);
+      router.push(nextTargetNormalized as any);
     }
   }, [accessToken, nextTarget, router]);
 

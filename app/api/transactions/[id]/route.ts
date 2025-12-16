@@ -12,14 +12,14 @@ const UpdateSchema = z.object({
   description: z.string().max(500).optional(),
 });
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = req.headers.get('x-user-id');
   if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
     const json = await req.json();
     const parsed = UpdateSchema.safeParse(json);
     if (!parsed.success) {
@@ -64,14 +64,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE /api/transactions/[id] - Delete a transaction
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = req.headers.get('x-user-id');
   if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Verify ownership before deleting
     const { data: existing } = await supabaseServer

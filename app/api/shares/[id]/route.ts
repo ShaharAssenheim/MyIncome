@@ -4,14 +4,14 @@ import supabaseServer from '../../../../supabaseServer';
 export const runtime = 'nodejs';
 
 // DELETE /api/shares/[id] - Remove a share
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = req.headers.get('x-user-id');
   if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Verify ownership before deleting (only owner can delete shares they created)
     const { data: existing } = await supabaseServer
