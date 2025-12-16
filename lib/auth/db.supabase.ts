@@ -71,7 +71,6 @@ export async function addRefreshToken(userId: string, rawToken: string, ttlMs: n
   const now = Date.now();
   const expiryTimestamp = now + ttlMs;
   const expiresAt = new Date(expiryTimestamp).toISOString();
-  console.log('[addRefreshToken] now:', new Date(now).toISOString(), 'ttlMs:', ttlMs, 'expires:', expiresAt);
   const { data, error } = await supabaseServer
     .from('auth_refresh_tokens')
     .insert({ user_id: userId, token_hash: hash, expires_at: expiresAt })
@@ -80,7 +79,6 @@ export async function addRefreshToken(userId: string, rawToken: string, ttlMs: n
     console.error('[addRefreshToken] failed', error);
     throw new Error('Failed to persist refresh token');
   }
-  console.log('[addRefreshToken] DB stored:', data);
 }
 
 export async function revokeRefreshToken(userId: string, rawToken: string): Promise<void> {

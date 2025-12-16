@@ -54,17 +54,14 @@ export async function middleware(req: NextRequest) {
   if (!isAuthApi && !isNextInternal && !isStaticAsset) {
     const refreshCookie = req.cookies.get('refresh_token');
     const rawRefresh = refreshCookie?.value;
-    console.log('[middleware]', pathname, 'has refresh cookie:', !!rawRefresh);
     let hasSession = false;
     let userId: string | null = null;
     if (rawRefresh) {
       const decoded = await verifyRefreshToken(rawRefresh);
-      console.log('[middleware] decoded:', !!decoded);
       if (decoded) {
         let validInDb = false;
         try {
           validInDb = await validateRefreshToken(decoded.sub, rawRefresh);
-          console.log('[middleware] validInDb:', validInDb);
         } catch (e) {
           console.error('[middleware] validateRefreshToken error', e);
         }
