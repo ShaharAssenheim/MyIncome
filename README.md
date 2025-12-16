@@ -1,132 +1,219 @@
 # 💰 MyIncome - Personal Income Tracker
 
-<div align="center">
+A modern, secure personal income tracking application built with **Next.js 16**, **React 18**, **TypeScript**, **Supabase**, and **Tailwind CSS**. Features dual authentication (Email/Password + Google OAuth), real-time data visualization, and multi-user support.
 
-![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js)
-![React](https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript)
-![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
+---
 
-A modern, secure, and feature-rich personal income tracking application built with Next.js 16, featuring Google OAuth, real-time data visualization, and multi-user support.
+## 🚀 Quick Start (5 Minutes)
 
-[Features](#-features) • [Installation](#-installation) • [Configuration](#-configuration) • [Architecture](#-architecture) • [Security](#-security)
+### Prerequisites
+- Node.js 18+
+- Supabase account (free tier)
+- Google OAuth credentials (optional)
 
-</div>
+### Installation
+
+```bash
+# 1. Clone and install
+git clone <your-repo-url>
+cd myincome
+npm install
+
+# 2. Set up environment
+cp .env.example .env.local
+# Edit .env.local with your credentials
+
+# 3. Run the app
+npm run dev
+```
+
+Visit **http://localhost:3000** 🎉
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create `.env.local` with:
+
+```env
+# Supabase (Required)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# JWT Secrets (Required) - Generate with:
+# node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+JWT_ACCESS_SECRET=your-access-token-secret-32-chars-min
+JWT_REFRESH_SECRET=your-refresh-token-secret-32-chars-min
+
+# Google OAuth (Optional)
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# App Settings
+APP_URL=http://localhost:3000
+NODE_ENV=development
+```
+
+### Database Setup
+
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Go to SQL Editor
+3. Run the scripts in `db/` folder in order:
+   - `01_auth_users.sql` - User accounts table
+   - `02_auth_refresh_tokens.sql` - Refresh tokens storage
+   - `03_transactions.sql` - Transaction records
+   - `04_user_shares.sql` - User sharing system
+   - `05_accessible_users_view.sql` - Combined data view
+
+### Google OAuth Setup (Optional)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a project
+3. Enable "Google+ API"
+4. Create OAuth 2.0 credentials
+5. Add authorized redirect URIs:
+   - Development: `http://localhost:3000/api/auth/google/callback`
+   - Production: `https://yourdomain.com/api/auth/google/callback`
+6. Copy Client ID & Secret to `.env.local`
 
 ---
 
 ## ✨ Features
 
 ### 🔐 Authentication & Security
-- **Dual Authentication**: Email/Password + Google OAuth 2.0
-- **JWT-based auth** with secure refresh token rotation
-- **CSRF protection** on all state-changing endpoints
+- **Email/Password + Google OAuth** authentication
+- **JWT tokens** with automatic refresh (15 min access, 7-14 days refresh)
+- **CSRF protection** on all state-changing operations
 - **HttpOnly cookies** for refresh tokens (XSS protection)
-- **Bcrypt password hashing** with salt rounds
-- **Session management** with automatic token refresh
+- **Bcrypt password hashing** with 10 salt rounds
+- **Rate limiting** on API endpoints
+- **Input validation** with Zod schemas
+- **Database user isolation** for data security
 
 ### 📊 Income Management
-- **Three income categories**: Cash, Bit (Digital), Bank Transfer
-- **Transaction tracking** with amount, date, and description
-- **Monthly filtering** with intuitive navigation
-- **Visual trends chart** using Recharts
-- **Real-time statistics** with animated cards
-- **Transaction history** with delete functionality
+- **Three categories**: Cash, Bit (Digital), Bank Transfer
+- **Track transactions** with amount, date, and description
+- **Monthly filtering** with calendar navigation
+- **Real-time statistics** with animated summary cards
+- **Visual trends chart** powered by Recharts
+- **Transaction history** with instant delete
 
 ### 👥 Multi-User Support
-- **User sharing system**: Share your data with family/partners
-- **Accessible users view**: See combined income from shared accounts
-- **Access control**: Manage who can view your transactions
-- **Database-level isolation**: Secure user data separation
+- **Share access** with family or partners
+- **View combined income** from multiple shared accounts
+- **Access control** - manage who can see your data
+- **Database-level security** with proper isolation
 
 ### 🎨 Modern UI/UX
-- **Responsive design**: Mobile-first approach with Tailwind CSS
-- **Smooth animations**: Framer Motion for delightful interactions
-- **RTL support**: Full Hebrew language interface
-- **Loading states**: Skeleton screens for better perceived performance
-- **Error handling**: User-friendly error messages
+- **Responsive design** - works on mobile, tablet, desktop
+- **RTL support** - full Hebrew language interface
+- **Smooth animations** with Framer Motion
+- **Skeleton loading** states for better perceived performance
+- **Error handling** with user-friendly messages
+- **Tailwind CSS** for beautiful, consistent styling
 
-### ⚡ Performance Optimizations
-- **Smart caching**: Prevents duplicate API calls
-- **Optimistic updates**: Instant UI feedback
-- **Client-side navigation**: Fast page transitions
-- **Debounced requests**: Reduced server load
-- **Middleware protection**: Route-level authentication
-
----
-
-## 🚀 Installation
-
-### Prerequisites
-- **Node.js** 18+ 
-- **npm** or **yarn**
-- **Supabase account** (free tier works)
-- **Google OAuth credentials** (optional, for Google login)
-
-### Quick Start
-
-1. **Clone the repository**
-```bash
-git clone https://github.com/yourusername/myincome.git
-cd myincome
-```
-
-2. **Install dependencies**
-```bash
-npm install
-```
-
-3. **Set up environment variables**
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your credentials:
-```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# JWT Secrets (generate random strings)
-JWT_ACCESS_SECRET=your-access-token-secret
-JWT_REFRESH_SECRET=your-refresh-token-secret
-
-# Google OAuth (optional)
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# App URL
-APP_URL=http://localhost:3000
-```
-
-4. **Set up the database**
-
-Run the SQL scripts in order from the `db/` folder in your Supabase SQL Editor:
-```bash
-db/01_auth_users.sql
-db/02_auth_refresh_tokens.sql
-db/03_transactions.sql
-db/04_user_shares.sql
-db/05_accessible_users_view.sql
-```
-
-5. **Run the development server**
-```bash
-npm run dev
-```
-
-Visit `http://localhost:3000` 🎉
+### ⚡ Performance
+- **Smart caching** - prevents duplicate API calls
+- **Optimistic updates** - instant UI feedback
+- **Client-side navigation** - no full page reloads
+- **Efficient re-renders** - optimized React components
+- **Middleware protection** - fast route authentication
 
 ---
 
-## ⚙️ Configuration
+## 🏗️ Project Structure
 
-### Database Setup
+```
+myincome/
+├── app/                      # Next.js 16 App Router
+│   ├── api/                  # API Routes
+│   │   ├── auth/            # Authentication endpoints
+│   │   │   ├── login/       # Email/password login
+│   │   │   ├── register/    # User registration
+│   │   │   ├── logout/      # Logout
+│   │   │   ├── refresh/     # Token refresh
+│   │   │   └── google/      # Google OAuth
+│   │   ├── transactions/    # Transaction CRUD
+│   │   ├── shares/          # User sharing
+│   │   └── users/           # User management
+│   ├── login/               # Login page
+│   ├── layout.tsx           # Root layout
+│   ├── page.tsx             # Main dashboard
+│   └── globals.css          # Global styles
+│
+├── components/              # React Components
+│   ├── CategoryCard.tsx     # Income category card
+│   ├── MonthSelector.tsx    # Month navigation
+│   ├── ShareManagement.tsx  # User sharing UI
+│   ├── SummaryCard.tsx      # Monthly summary
+│   ├── TransactionList.tsx  # Transaction table
+│   ├── TransactionModal.tsx # Add transaction modal
+│   └── TrendsChart.tsx      # Income trends chart
+│
+├── lib/                     # Utilities
+│   ├── auth/               # Authentication
+│   │   ├── db.supabase.ts  # Auth database ops
+│   │   ├── hash.ts         # Password hashing
+│   │   ├── jwt.ts          # JWT management
+│   │   └── useAuth.ts      # Auth React hook
+│   └── security/
+│       └── csrf.ts         # CSRF protection
+│
+├── db/                     # Database SQL Scripts
+│   ├── 01_auth_users.sql
+│   ├── 02_auth_refresh_tokens.sql
+│   ├── 03_transactions.sql
+│   ├── 04_user_shares.sql
+│   └── 05_accessible_users_view.sql
+│
+├── middleware.ts           # Route protection
+├── supabaseServer.ts      # Supabase client
+├── types.ts               # TypeScript types
+└── constants.tsx          # App constants
+```
 
-The application uses Supabase PostgreSQL with the following schema:
+---
 
-#### Users Table
+## 🔒 Security Features
+
+### Authentication
+- ✅ JWT with short expiration (15 minutes)
+- ✅ Refresh token rotation (7-14 days)
+- ✅ HttpOnly cookies (not accessible via JavaScript)
+- ✅ Bcrypt password hashing
+- ✅ Google OAuth 2.0 integration
+
+### API Security
+- ✅ CSRF tokens for POST/DELETE requests
+- ✅ Rate limiting per IP
+- ✅ Input validation with Zod
+- ✅ SQL injection protection (parameterized queries)
+- ✅ User ID verification in middleware
+
+### Best Practices
+```typescript
+// ✅ DO: Use environment variables
+const secret = process.env.JWT_SECRET;
+
+// ❌ DON'T: Hardcode secrets
+const secret = 'my-secret-key';
+
+// ✅ DO: Validate user ownership
+if (transaction.user_id !== req.headers.get('x-user-id')) {
+  throw new Error('Unauthorized');
+}
+
+// ❌ DON'T: Trust client data
+const userId = req.body.userId; // NEVER!
+```
+
+---
+
+## 📦 Database Schema
+
+### Users Table
 ```sql
 CREATE TABLE auth_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -138,7 +225,7 @@ CREATE TABLE auth_users (
 );
 ```
 
-#### Transactions Table
+### Transactions Table
 ```sql
 CREATE TABLE transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -151,7 +238,7 @@ CREATE TABLE transactions (
 );
 ```
 
-#### User Shares Table
+### User Shares Table
 ```sql
 CREATE TABLE user_shares (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -162,211 +249,11 @@ CREATE TABLE user_shares (
 );
 ```
 
-See the `db/` folder for complete SQL scripts with indexes and views.
-
-### Google OAuth Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the Google+ API
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URIs:
-   - Development: `http://localhost:3000/api/auth/google/callback`
-   - Production: `https://yourdomain.com/api/auth/google/callback`
-6. Copy the Client ID and Client Secret to `.env.local`
-
-For detailed instructions, see [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
-
-### Environment Variables Reference
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Your Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Service role key (never expose to client) |
-| `JWT_ACCESS_SECRET` | ✅ | Secret for signing access tokens |
-| `JWT_REFRESH_SECRET` | ✅ | Secret for signing refresh tokens |
-| `GOOGLE_CLIENT_ID` | ❌ | Google OAuth client ID (optional) |
-| `GOOGLE_CLIENT_SECRET` | ❌ | Google OAuth client secret (optional) |
-| `APP_URL` | ✅ | Full URL of your application |
-
----
-
-## 🏗️ Architecture
-
-### Project Structure
-
-```
-myincome/
-├── app/                          # Next.js 16 App Router
-│   ├── api/                      # API routes
-│   │   ├── auth/                 # Authentication endpoints
-│   │   │   ├── login/           # Email/password login
-│   │   │   ├── register/        # User registration
-│   │   │   ├── logout/          # Logout endpoint
-│   │   │   ├── refresh/         # Token refresh
-│   │   │   └── google/          # Google OAuth flow
-│   │   ├── transactions/        # Transaction CRUD
-│   │   ├── shares/              # User sharing
-│   │   └── users/               # User management
-│   ├── login/                   # Login page
-│   ├── layout.tsx               # Root layout
-│   ├── page.tsx                 # Main dashboard
-│   └── globals.css              # Global styles
-│
-├── components/                   # React components
-│   ├── CategoryCard.tsx         # Income category display
-│   ├── MonthSelector.tsx        # Month navigation
-│   ├── ShareManagement.tsx      # User sharing UI
-│   ├── SummaryCard.tsx          # Monthly summary
-│   ├── TransactionList.tsx      # Transaction table
-│   ├── TransactionModal.tsx     # Add transaction modal
-│   └── TrendsChart.tsx          # Income trends chart
-│
-├── lib/                         # Utility libraries
-│   ├── auth/                    # Authentication logic
-│   │   ├── db.supabase.ts      # Auth database operations
-│   │   ├── hash.ts             # Password hashing
-│   │   ├── jwt.ts              # JWT token management
-│   │   └── useAuth.ts          # Auth React hook
-│   └── security/                # Security utilities
-│       └── csrf.ts             # CSRF token management
-│
-├── db/                          # Database schemas
-│   ├── 01_auth_users.sql
-│   ├── 02_auth_refresh_tokens.sql
-│   ├── 03_transactions.sql
-│   ├── 04_user_shares.sql
-│   └── 05_accessible_users_view.sql
-│
-├── middleware.ts                # Next.js middleware (auth)
-├── supabaseServer.ts           # Supabase client
-├── types.ts                    # TypeScript types
-└── constants.tsx               # App constants
-```
-
-### Authentication Flow
-
-```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │ 1. Login (email/password or Google)
-       ▼
-┌─────────────────┐
-│  /api/auth/*    │
-│  Route Handler  │
-└────────┬────────┘
-         │ 2. Validate credentials
-         │ 3. Generate JWT tokens
-         ▼
-┌─────────────────┐
-│   Supabase DB   │
-│  Store refresh  │
-│     token       │
-└────────┬────────┘
-         │ 4. Return access token + set cookie
-         ▼
-┌─────────────────┐
-│     Client      │
-│  Store token    │
-│   in memory     │
-└────────┬────────┘
-         │ 5. Authenticated requests
-         ▼
-┌─────────────────┐
-│   Middleware    │
-│  Verify token   │
-└─────────────────┘
-```
-
-### Data Flow
-
-1. **Authentication**: JWT tokens with refresh rotation
-2. **API Calls**: Bearer token in Authorization header
-3. **Middleware**: Validates refresh token cookie for pages
-4. **CSRF Protection**: Required for state-changing operations
-5. **Database**: Row-level security with user isolation
-
----
-
-## 🔒 Security
-
-### Security Features
-
-#### 1. **Authentication Security**
-- ✅ JWT tokens with short expiration (15 minutes)
-- ✅ Refresh tokens with rotation (7-14 days)
-- ✅ HttpOnly cookies for refresh tokens
-- ✅ Bcrypt password hashing (10 salt rounds)
-- ✅ Google OAuth 2.0 integration
-
-#### 2. **CSRF Protection**
-- ✅ CSRF tokens for all POST/DELETE requests
-- ✅ Token verification in middleware
-- ✅ SameSite cookie attributes
-
-#### 3. **API Security**
-- ✅ Rate limiting on API routes
-- ✅ Input validation with Zod schemas
-- ✅ SQL injection protection (parameterized queries)
-- ✅ User ID verification in middleware
-
-#### 4. **Data Security**
-- ✅ Database-level user isolation
-- ✅ Supabase Row Level Security (RLS)
-- ✅ Secure service role key usage
-- ✅ Environment variable protection
-
-### Security Best Practices
-
-```typescript
-// ✅ DO: Use environment variables
-const secret = process.env.JWT_SECRET;
-
-// ❌ DON'T: Hardcode secrets
-const secret = 'my-secret-key';
-
-// ✅ DO: Validate user ownership
-const userId = req.headers.get('x-user-id');
-if (transaction.user_id !== userId) throw new Error();
-
-// ❌ DON'T: Trust client data
-const userId = req.body.userId; // Never!
-
-// ✅ DO: Use HttpOnly cookies for tokens
-cookieStore.set('refresh_token', token, { httpOnly: true });
-
-// ❌ DON'T: Store tokens in localStorage
-localStorage.setItem('token', token); // XSS vulnerable!
-```
-
----
-
-## 📦 Deployment
-
-### Deploy to Vercel
-
-1. Push your code to GitHub
-2. Import project in [Vercel](https://vercel.com)
-3. Add environment variables
-4. Deploy!
-
-### Production Checklist
-- [ ] Set `NODE_ENV=production`
-- [ ] Use strong JWT secrets (32+ characters)
-- [ ] Enable Supabase RLS policies
-- [ ] Set up proper CORS headers
-- [ ] Configure rate limiting
-- [ ] Enable HTTPS only
-- [ ] Set secure cookie flags
-- [ ] Add monitoring (Sentry, LogRocket)
-- [ ] Set up database backups
-
 ---
 
 ## 🛠️ Development
 
-### Available Scripts
+### Available Commands
 
 ```bash
 npm run dev        # Start development server (port 3000)
@@ -374,41 +261,152 @@ npm run build      # Build for production
 npm run start      # Start production server
 ```
 
-### Code Style
-
-This project uses:
-- **TypeScript** for type safety
-- **Tailwind CSS** for styling
-- **ESM modules** for modern JavaScript
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
+### Tech Stack
+- **Frontend**: Next.js 16, React 18, TypeScript 5.8
+- **Styling**: Tailwind CSS 3.4
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: JWT (jose), bcryptjs
+- **Charts**: Recharts 2.12
+- **Animations**: Framer Motion 11
+- **Icons**: Lucide React
+- **Validation**: Zod
 
 ---
 
-## 👨‍💻 Author
+## 🚀 Deployment
 
-**Shahar**
+### Deploy to Vercel
 
-Made with ❤️ using Next.js and Supabase
+1. Push code to GitHub
+2. Import project at [vercel.com](https://vercel.com)
+3. Add all environment variables
+4. Deploy!
+
+### Production Checklist
+- [ ] Strong JWT secrets (32+ characters)
+- [ ] `NODE_ENV=production`
+- [ ] Supabase RLS policies enabled
+- [ ] HTTPS only
+- [ ] Secure cookie flags
+- [ ] Rate limiting configured
+- [ ] Database backups enabled
+- [ ] Monitoring set up (Sentry, etc.)
+- [ ] Error tracking enabled
 
 ---
 
-## 🙏 Acknowledgments
+## 🐛 Troubleshooting
 
-- [Next.js](https://nextjs.org/) - The React Framework
-- [Supabase](https://supabase.com/) - Open source Firebase alternative
-- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [Recharts](https://recharts.org/) - Charting library
-- [Framer Motion](https://www.framer.com/motion/) - Animation library
-- [Lucide Icons](https://lucide.dev/) - Beautiful icons
+### Port 3000 in use?
+```bash
+# Windows
+netstat -ano | findstr :3000
+taskkill /PID <pid> /F
+
+# Mac/Linux
+lsof -ti:3000 | xargs kill -9
+```
+
+### Database connection fails?
+- Verify Supabase URL and key in `.env.local`
+- Check all SQL scripts ran successfully
+- Ensure table names match code
+
+### Google OAuth not working?
+- Verify redirect URI matches exactly
+- Check Client ID and Secret are correct
+- Ensure Google+ API is enabled
+- Clear browser cookies and try again
+
+### Token refresh fails?
+- Clear browser cookies
+- Log out and log in again (one-time fix for existing sessions)
+- Verify JWT secrets are set
+
+---
+
+## 📚 How It Works
+
+### Authentication Flow
+```
+User Login
+   ↓
+Validate credentials
+   ↓
+Generate JWT tokens (access + refresh)
+   ↓
+Store refresh token in database
+   ↓
+Return access token + set HttpOnly cookie
+   ↓
+User authenticated!
+```
+
+### Token Refresh
+```
+API call with expired token (401)
+   ↓
+Auto-refresh with refresh token cookie
+   ↓
+Get new access token
+   ↓
+Retry original request
+```
+
+### Data Flow
+1. User adds transaction → POST /api/transactions
+2. Middleware validates JWT token
+3. Database stores with user_id
+4. UI updates optimistically
+5. Charts recalculate automatically
+
+---
+
+## 🎯 Future Ideas
+
+- Export to CSV/PDF
+- Budget tracking with alerts
+- Recurring transactions
+- Mobile app (React Native)
+- Email notifications
+- Advanced analytics
+- Dark mode
+- Multi-currency support
+- Custom categories
+- Receipt photo uploads
+
+---
+
+## 👨‍💻 Contributing
+
+Contributions are welcome!
+
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push: `git push origin feature/amazing-feature`
+5. Open Pull Request
+
+**Code Style:**
+- Use TypeScript
+- Follow existing patterns
+- Keep components small
+- Add comments for complex logic
+- Test your changes
+
+---
+
+## 📞 Support
+
+- Open an issue for bugs
+- Start a discussion for questions
+- Check existing issues before creating new ones
 
 ---
 
 <div align="center">
+
+**Made with ❤️ by Shahar**
 
 ⭐ Star this repo if you find it helpful!
 
