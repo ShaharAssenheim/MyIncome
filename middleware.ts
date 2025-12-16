@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken, verifyRefreshToken } from './lib/auth/jwt';
 import { validateRefreshToken } from './lib/auth/db.supabase';
 
+// Rate limiting (simple in-memory fallback; replace with Redis/KV in production)
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = 120; // global per IP/minute
+const buckets = new Map<string, { count: number; reset: number }>();
+function rateLimit(key: string): boolean {
+  const now = Date.now();
+  const b = buckets.get(key) || { count: 0, reset: now + RATE_WINDOW_MS };
+  if (now > b.reset) { b.count = 0; b.reset = now + RATE_WINDOW_MS; }
+  b.count++; buckets.set(key, b);
+  return b.count <= RATE_MAX;
+}
+
 // Middleware responsibilities:
 // 1. Keep existing protection for /api/secure/* using access token header.
 // 2. Gate all non-auth pages: require a valid refresh token cookie to view protected pages.
@@ -18,6 +30,11 @@ export async function middleware(req: NextRequest) {
 
   // Secure API route protection (access token via Authorization header)
   if (pathname.startsWith('/api/secure') || pathname.startsWith('/api/transactions') || pathname.startsWith('/api/shares') || pathname.startsWith('/api/users')) {
+    // Basic per-IP rate limit for API calls
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    if (!rateLimit(`api:${ip}`)) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -27,9 +44,10 @@ export async function middleware(req: NextRequest) {
     if (!payload) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
-    const res = NextResponse.next();
-    res.headers.set('x-user-id', payload.sub);
-    return res;
+    // Propagate user id to downstream request (avoid trusting incoming header)
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-user-id', payload.sub);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Page-level gating using refresh token
@@ -69,11 +87,10 @@ export async function middleware(req: NextRequest) {
       url.searchParams.set('next', pathname);
       return NextResponse.redirect(url);
     }
-
     if (hasSession && userId) {
-      const res = NextResponse.next();
-      res.headers.set('x-user-id', userId);
-      return res;
+      const requestHeaders = new Headers(req.headers);
+      requestHeaders.set('x-user-id', userId);
+      return NextResponse.next({ request: { headers: requestHeaders } });
     }
   }
 

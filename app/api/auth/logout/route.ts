@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { verifyRefreshToken } from '../../../../lib/auth/jwt';
+import { requireCsrf } from '../../../../lib/security/csrf';
 
 export const runtime = 'nodejs';
 import { revokeRefreshToken } from '../../../../lib/auth/db.supabase';
@@ -7,6 +8,8 @@ import cookie from 'cookie';
 
 export async function POST(req: NextRequest) {
   try {
+    const csrfHeader = req.headers.get('x-csrf-token');
+    try { await requireCsrf(csrfHeader); } catch { return Response.json({ error: 'Invalid CSRF' }, { status: 403 }); }
     const cookieHeader = req.headers.get('cookie') || '';
     const parsed = cookie.parse(cookieHeader);
     const existingRefresh = parsed['refresh_token'];

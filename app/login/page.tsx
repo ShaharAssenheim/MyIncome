@@ -116,9 +116,10 @@ function LoginForm() {
   useEffect(() => {
     if (accessToken) {
       const nextTargetNormalized = nextTarget.startsWith('/') ? nextTarget : `/${nextTarget}`;
-      window.location.href = nextTargetNormalized;
+      // Use router.push for faster navigation (no full page reload)
+      router.push(nextTargetNormalized);
     }
-  }, [accessToken, nextTarget]);
+  }, [accessToken, nextTarget, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4" dir="rtl">
@@ -237,7 +238,7 @@ function LoginForm() {
                 </button>
                 <p className="text-xs text-slate-500 text-center">
                   כבר יש לך חשבון?{' '}
-                  <button type="button" onClick={() => setMode('login')} className="font-semibold text-indigo-600 hover:text-indigo-500">
+                  <button type="button" onClick={() => { setMode('login'); router.push('/login'); }} className="font-semibold text-indigo-600 hover:text-indigo-500">
                     התחבר
                   </button>
                 </p>
@@ -289,7 +290,7 @@ function LoginForm() {
                 </button>
                 <p className="text-xs text-slate-500 text-center">
                   כבר יש לך חשבון?{' '}
-                  <button type="button" onClick={() => setMode('login')} className="font-semibold text-indigo-600 hover:text-indigo-500">
+                  <button type="button" onClick={() => { setMode('login'); router.push('/login'); }} className="font-semibold text-indigo-600 hover:text-indigo-500">
                     התחבר
                   </button>
                 </p>

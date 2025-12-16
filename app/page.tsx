@@ -20,12 +20,12 @@ const mapRowToTransaction = (row: any): Transaction => ({
 });
 
 export default function Page() {
-  const { fetchWithAuth, logout, user } = useAuth();
+  const { fetchWithAuth, logout, user, isInitializing } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<IncomeType | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogout = async () => {
@@ -43,15 +43,23 @@ export default function Page() {
       }
       const data = await res.json();
       setTransactions(data.map(mapRowToTransaction));
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to load transactions', e);
+      // If not authenticated, redirect to login
+      if (e.message === 'Not authenticated') {
+        window.location.href = '/login';
+        return;
+      }
       setError('Failed to load data');
       setTransactions([]);
     }
     setIsLoading(false);
   }, [fetchWithAuth]);
 
+  // Wait for auth to initialize before fetching data
   useEffect(() => {
+    if (isInitializing) return;
+    
     let mounted = true;
     const loadData = async () => {
       if (mounted) {
@@ -60,7 +68,7 @@ export default function Page() {
     };
     loadData();
     return () => { mounted = false; };
-  }, [fetchTransactions]);
+  }, [isInitializing, fetchTransactions]);
 
   const handlePrevMonth = () => {
     setCurrentDate(prev => {
@@ -163,16 +171,29 @@ export default function Page() {
             {error}
           </div>
         )}
-        <div className="flex justify-center mb-8">
-          <div className="w-full max-w-md">
-            <MonthSelector
-              currentDate={currentDate}
-              onPrevMonth={handlePrevMonth}
-              onNextMonth={handleNextMonth}
-            />
+        {(isInitializing || isLoading) && transactions.length === 0 ? (
+          <div className="space-y-6">
+            <div className="h-12 bg-slate-200 animate-pulse rounded-xl w-full max-w-md mx-auto"></div>
+            <div className="h-32 bg-slate-200 animate-pulse rounded-2xl"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
+              <div className="h-40 bg-slate-200 animate-pulse rounded-2xl"></div>
+              <div className="h-40 bg-slate-200 animate-pulse rounded-2xl"></div>
+              <div className="h-40 bg-slate-200 animate-pulse rounded-2xl"></div>
+            </div>
+            <div className="h-64 bg-slate-200 animate-pulse rounded-2xl"></div>
           </div>
-        </div>
-        <SummaryCard stats={stats} />
+        ) : (
+          <>
+            <div className="flex justify-center mb-8">
+              <div className="w-full max-w-md">
+                <MonthSelector
+                  currentDate={currentDate}
+                  onPrevMonth={handlePrevMonth}
+                  onNextMonth={handleNextMonth}
+                />
+              </div>
+            </div>
+            <SummaryCard stats={stats} />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8 mb-10">
           <CategoryCard
             type={IncomeType.CASH}
@@ -193,14 +214,16 @@ export default function Page() {
             delay={0.3}
           />
         </div>
-        <TrendsChart transactions={transactions} currentDate={currentDate} />
-        <div className="w-full">
-          <TransactionList
-            transactions={currentMonthTransactions}
-            onDelete={handleDeleteTransaction}
-            isLoading={isLoading}
-          />
-        </div>
+            <TrendsChart transactions={transactions} currentDate={currentDate} />
+            <div className="w-full">
+              <TransactionList
+                transactions={currentMonthTransactions}
+                onDelete={handleDeleteTransaction}
+                isLoading={isLoading}
+              />
+            </div>
+          </>
+        )}
       </div>
       <TransactionModal
         isOpen={isModalOpen}

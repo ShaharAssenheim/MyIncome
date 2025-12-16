@@ -4,6 +4,7 @@ import cookie from 'cookie';
 export const runtime = 'nodejs';
 import { createUser, findByEmail, findByGoogleId, addRefreshToken } from '../../../../../lib/auth/db.supabase';
 import { signAccessToken, signRefreshToken } from '../../../../../lib/auth/jwt';
+import { issueCsrfToken } from '../../../../../lib/security/csrf';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo';
@@ -94,6 +95,8 @@ export async function GET(req: NextRequest) {
       path: '/',
       maxAge: REFRESH_TTL_MS / 1000,
     });
+    // Issue CSRF token
+    await issueCsrfToken();
     const redirectTo = `${appUrl}/`;
     return new Response(null, { status: 302, headers: { Location: redirectTo, 'Set-Cookie': `${refreshCookie}, ${clearState}` } });
   } catch (e) {

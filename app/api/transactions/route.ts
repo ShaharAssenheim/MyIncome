@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import supabaseServer from '../../../supabaseServer';
+import { z } from 'zod';
 
 export const runtime = 'nodejs';
 
@@ -34,6 +35,13 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/transactions - Create a new transaction
+const TransactionSchema = z.object({
+  amount: z.number().finite(),
+  type: z.string().min(1).max(50),
+  date: z.string().min(4).max(40),
+  description: z.string().max(500).optional(),
+});
+
 export async function POST(req: NextRequest) {
   const userId = req.headers.get('x-user-id');
   if (!userId) {
@@ -41,12 +49,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
-    const { amount, type, date, description } = body;
-
-    if (!amount || !type || !date) {
-      return Response.json({ error: 'Missing required fields' }, { status: 400 });
+    const json = await req.json();
+    const parsed = TransactionSchema.safeParse(json);
+    if (!parsed.success) {
+      return Response.json({ error: 'Invalid transaction data' }, { status: 400 });
     }
+    const { amount, type, date, description } = parsed.data;
 
     const { data, error } = await supabaseServer
       .from('transactions')

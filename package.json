@@ -8,18 +8,19 @@
     "start": "next start"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.84.0",
+    "@supabase/supabase-js": "^2.39.0",
     "bcryptjs": "^2.4.3",
     "cookie": "^0.6.0",
     "framer-motion": "11.0.8",
     "jose": "^6.1.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "0.344.0",
-    "next": "^14.2.0",
+    "next": "^16.0.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.2.1",
-    "recharts": "2.12.7"
+    "recharts": "2.12.7",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

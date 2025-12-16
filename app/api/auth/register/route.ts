@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createUser, findByEmail, addRefreshToken } from '../../../../lib/auth/db.supabase';
+import { issueCsrfToken } from '../../../../lib/security/csrf';
+import { z } from 'zod';
 
 export const runtime = 'nodejs';
 import { hashPassword } from '../../../../lib/auth/hash';
@@ -8,16 +10,20 @@ import cookie from 'cookie';
 
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+const RegisterSchema = z.object({
+  email: z.string().email(),
+  username: z.string().min(3).max(40),
+  password: z.string().min(8).max(128),
+});
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { email, username, password } = body;
-    if (!email || !username || !password) {
-      return Response.json({ error: 'Missing fields' }, { status: 400 });
+    const json = await req.json();
+    const parsed = RegisterSchema.safeParse(json);
+    if (!parsed.success) {
+      return Response.json({ error: 'Invalid fields' }, { status: 400 });
     }
-    if (typeof email !== 'string' || typeof username !== 'string' || typeof password !== 'string') {
-      return Response.json({ error: 'Invalid field types' }, { status: 400 });
-    }
+    const { email, username, password } = parsed.data;
     const existing = await findByEmail(email);
     if (existing) {
       return Response.json({ error: 'Email already in use' }, { status: 409 });
@@ -36,7 +42,8 @@ export async function POST(req: NextRequest) {
       maxAge: REFRESH_TTL_MS / 1000,
     });
 
-    return new Response(JSON.stringify({ accessToken, user: { id: user.id, email: user.email, username: user.username } }), {
+    const csrfToken = await issueCsrfToken();
+    return new Response(JSON.stringify({ accessToken, csrfToken, user: { id: user.id, email: user.email, username: user.username } }), {
       status: 201,
       headers: { 'Set-Cookie': refreshCookie, 'Content-Type': 'application/json' },
     });

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { verifyRefreshToken, signAccessToken, signRefreshToken } from '../../../../lib/auth/jwt';
+import { requireCsrf, issueCsrfToken } from '../../../../lib/security/csrf';
 
 export const runtime = 'nodejs';
 import { validateRefreshToken, addRefreshToken, revokeRefreshToken, findById } from '../../../../lib/auth/db.supabase';
@@ -9,6 +10,9 @@ const DEFAULT_REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
+    // CSRF: require header token for cookie-auth endpoint
+    const csrfHeader = req.headers.get('x-csrf-token');
+    try { await requireCsrf(csrfHeader); } catch { return Response.json({ error: 'Invalid CSRF' }, { status: 403 }); }
     const cookieHeader = req.headers.get('cookie') || '';
     const parsed = cookie.parse(cookieHeader);
     const existingRefresh = parsed['refresh_token'];
@@ -39,8 +43,12 @@ export async function POST(req: NextRequest) {
       maxAge: DEFAULT_REFRESH_TTL_MS / 1000,
     });
 
+    // Issue new CSRF token on refresh
+    const csrfToken = await issueCsrfToken();
+
     return new Response(JSON.stringify({ 
       accessToken,
+      csrfToken,
       user: { id: user.id, email: user.email, username: user.username }
     }), {
       status: 200,

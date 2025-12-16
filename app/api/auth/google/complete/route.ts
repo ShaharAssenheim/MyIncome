@@ -4,6 +4,7 @@ import cookie from 'cookie';
 export const runtime = 'nodejs';
 import { createUser, findByEmail, findByGoogleId, addRefreshToken } from '../../../../../lib/auth/db.supabase';
 import { signAccessToken, signRefreshToken } from '../../../../../lib/auth/jwt';
+import { issueCsrfToken } from '../../../../../lib/security/csrf';
 
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -37,7 +38,10 @@ export async function POST(req: NextRequest) {
       maxAge: REFRESH_TTL_MS / 1000,
     });
 
-    return Response.json({ accessToken: access, user: { id: user.id, email: user.email, username: user.username } }, {
+    // Issue CSRF token
+    const csrfToken = await issueCsrfToken();
+
+    return Response.json({ accessToken: access, csrfToken, user: { id: user.id, email: user.email, username: user.username } }, {
       status: 201,
       headers: { 'Set-Cookie': refreshCookie }
     });
