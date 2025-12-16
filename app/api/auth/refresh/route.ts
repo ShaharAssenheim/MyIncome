@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { verifyRefreshToken, signAccessToken, signRefreshToken } from '../../../../lib/auth/jwt';
 import { requireCsrf, issueCsrfToken } from '../../../../lib/security/csrf';
+import { cookies } from 'next/headers';
 
 export const runtime = 'nodejs';
 import { validateRefreshToken, addRefreshToken, revokeRefreshToken, findById } from '../../../../lib/auth/db.supabase';
@@ -21,8 +22,8 @@ export async function POST(req: NextRequest) {
     // CSRF: Only check if a CSRF token exists in cookies (after first login)
     // The refresh token cookie itself provides CSRF protection (httpOnly + sameSite)
     const csrfHeader = req.headers.get('x-csrf-token');
-    const cookieStore = await (await import('next/headers')).cookies();
-    const csrfCookie = (await cookieStore).get('csrf_token')?.value;
+    const cookieStore = await cookies();
+    const csrfCookie = cookieStore.get('csrf_token')?.value;
     
     // If CSRF cookie exists, require matching header
     if (csrfCookie) {
