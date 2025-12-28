@@ -58,9 +58,9 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ stats }) => {
 
         {/* Chart Section */}
         <div className="w-56 h-56 md:w-64 md:h-64 relative flex-shrink-0">
-            {stats.total > 0 ? (
+          {stats.total > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart >
                   <Pie
                     data={data}
                     cx="50%"
@@ -103,8 +103,8 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ stats }) => {
             
             {/* Center Text in Pie */}
             {stats.total > 0 && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none flex-col">
-                    <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">התפלגות</span>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-slate-300 text-sm font-bold uppercase tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">התפלגות</span>
                 </div>
             )}
         </div>

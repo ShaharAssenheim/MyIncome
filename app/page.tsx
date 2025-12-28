@@ -2,11 +2,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Transaction, IncomeType, MonthlyStats } from '../types';
 import { MonthSelector } from '../components/MonthSelector';
-import { SummaryCard } from '../components/SummaryCard';
+import { DynamicSummaryCard, DynamicTrendsChart } from '../components/ClientCharts';
 import { CategoryCard } from '../components/CategoryCard';
 import { TransactionModal } from '../components/TransactionModal';
 import { TransactionList } from '../components/TransactionList';
-import { TrendsChart } from '../components/TrendsChart';
 import { useAuth } from '../lib/auth/useAuth';
 import { ShareManagement } from '../components/ShareManagement';
 
@@ -193,7 +192,7 @@ export default function Page() {
                 />
               </div>
             </div>
-            <SummaryCard stats={stats} />
+            <DynamicSummaryCard stats={stats} />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8 mb-10">
           <CategoryCard
             type={IncomeType.CASH}
@@ -214,7 +213,7 @@ export default function Page() {
             delay={0.3}
           />
         </div>
-            <TrendsChart transactions={transactions} currentDate={currentDate} />
+            <DynamicTrendsChart transactions={transactions} currentDate={currentDate} />
             <div className="w-full">
               <TransactionList
                 transactions={currentMonthTransactions}
