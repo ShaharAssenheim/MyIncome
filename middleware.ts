@@ -1,23 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Admin client for profile lookups (no session state, service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } },
-);
-
-// Looks up auth_users.id by email so existing data foreign keys stay intact
-async function getProfileId(email: string): Promise<string> {
-  const { data } = await supabaseAdmin
-    .from('auth_users')
-    .select('id')
-    .eq('email', email)
-    .maybeSingle();
-  return data?.id ?? '';
-}
 
 // Rate limiting (simple in-memory; replace with Redis/KV in production)
 const RATE_WINDOW_MS = 60_000;
@@ -48,12 +30,16 @@ export async function middleware(req: NextRequest) {
     {
       cookies: {
         getAll() { return req.cookies.getAll(); },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headersToSet) {
           cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request: req });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
           );
+          Object.entries(headersToSet).forEach(([key, value]) =>
+            supabaseResponse.headers.set(key, value),
+          );
+          supabaseResponse.headers.set('Cache-Control', 'private, no-store');
         },
       },
     },
@@ -62,12 +48,20 @@ export async function middleware(req: NextRequest) {
   // Verify session with Supabase Auth server (secure — validates JWT signature)
   const { data: { user } } = await supabase.auth.getUser();
 
+  function copyAuthHeaders(res: NextResponse) {
+    ['cache-control', 'expires', 'pragma'].forEach(header => {
+      const value = supabaseResponse.headers.get(header);
+      if (value) res.headers.set(header, value);
+    });
+  }
+
   // Helper: build a response that carries refreshed Supabase cookies + x-user-id header
   function buildAuthedResponse(profileId: string) {
     const reqHeaders = new Headers(req.headers);
     reqHeaders.set('x-user-id', profileId);
     const res = NextResponse.next({ request: { headers: reqHeaders } });
     supabaseResponse.cookies.getAll().forEach(c => res.cookies.set(c.name, c.value, c));
+    copyAuthHeaders(res);
     return res;
   }
 
@@ -75,6 +69,7 @@ export async function middleware(req: NextRequest) {
   function buildRedirect(url: URL) {
     const res = NextResponse.redirect(url);
     supabaseResponse.cookies.getAll().forEach(c => res.cookies.set(c.name, c.value, c));
+    copyAuthHeaders(res);
     return res;
   }
 
@@ -91,8 +86,7 @@ export async function middleware(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const profileId = await getProfileId(user.email!);
-    return buildAuthedResponse(profileId);
+    return buildAuthedResponse(user.id);
   }
 
   // Page-level gating
@@ -105,12 +99,11 @@ export async function middleware(req: NextRequest) {
     if (!isLogin && !user) {
       const url = req.nextUrl.clone();
       url.pathname = '/login';
-      url.searchParams.set('next', pathname);
+      url.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
       return buildRedirect(url);
     }
     if (user) {
-      const profileId = await getProfileId(user.email!);
-      return buildAuthedResponse(profileId);
+      return buildAuthedResponse(user.id);
     }
   }
 

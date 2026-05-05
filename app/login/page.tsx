@@ -18,6 +18,11 @@ function LoginForm() {
 
   const supabase = useMemo(() => createClient(), []);
 
+  function getSafeNextTarget() {
+    if (!nextTarget.startsWith('/') || nextTarget.startsWith('//')) return '/';
+    return nextTarget;
+  }
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -25,9 +30,10 @@ function LoginForm() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      router.push(nextTarget.startsWith('/') ? nextTarget : `/${nextTarget}`);
-    } catch (e: any) {
-      setError(e.message || 'Login failed');
+      router.replace(getSafeNextTarget());
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -45,24 +51,42 @@ function LoginForm() {
       });
       if (error) throw error;
       if (data.session) {
-        // Email confirmation disabled — signed in immediately
-        router.push(nextTarget.startsWith('/') ? nextTarget : `/${nextTarget}`);
+        router.replace(getSafeNextTarget());
+        router.refresh();
       } else {
-        // Email confirmation required
         setSuccessMsg('נשלח מייל לאימות. בדוק את תיבת הדואר שלך.');
       }
-    } catch (e: any) {
-      setError(e.message || 'Signup failed');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Signup failed');
     } finally {
       setLoading(false);
     }
   }
 
-  function handleGoogle() {
-    supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
-    });
+  async function handleGoogle() {
+    setError(null);
+    setLoading(true);
+
+    try {
+      const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+      callbackUrl.searchParams.set('next', getSafeNextTarget());
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: callbackUrl.toString(),
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) throw error;
+    } catch (e) {
+      setLoading(false);
+      setError(e instanceof Error ? e.message : 'Google login failed');
+    }
   }
 
   return (
@@ -94,6 +118,7 @@ function LoginForm() {
             <button
               type="button"
               onClick={handleGoogle}
+              disabled={loading}
               className="w-full py-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-medium flex items-center justify-center gap-2 transition-colors"
             >
               <span>התחבר עם Google</span>
