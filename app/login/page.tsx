@@ -9,12 +9,22 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextTarget = searchParams.get('next') || '/';
+
+  // Show the real error from the callback URL (?error=...&detail=...)
+  const callbackError = searchParams.get('error');
+  const callbackDetail = searchParams.get('detail');
+  const [error, setError] = useState<string | null>(
+    callbackError
+      ? callbackDetail
+        ? `Authentication failed: ${callbackDetail}`
+        : 'Authentication failed — check Supabase dashboard settings'
+      : null,
+  );
 
   const supabase = useMemo(() => createClient(), []);
 

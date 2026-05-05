@@ -31,7 +31,16 @@ function copyAuthState(
 }
 
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = new URL(req.url);
+  // On Vercel, req.url is correct but let's derive origin from the forwarded host
+  // so the redirect always points to the live domain, not an internal proxy address.
+  const requestUrl = new URL(req.url);
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const forwardedProto = req.headers.get('x-forwarded-proto') ?? 'https';
+  const origin = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : requestUrl.origin;
+
+  const { searchParams } = requestUrl;
   const code = searchParams.get('code');
   const next = getSafeRedirectPath(searchParams.get('next'));
 
@@ -46,11 +55,13 @@ export async function GET(req: NextRequest) {
       {
         cookies: {
           getAll() { return cookieStore.getAll(); },
+          // Do NOT call cookieStore.set() here — in a GET Route Handler that returns
+          // a custom NextResponse, next/headers cookie writes are silently discarded.
+          // We collect them in pendingCookies and copy them to the response manually.
           setAll(cookiesToSet, headersToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-              pendingCookies.push({ name, value, options });
-            });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              pendingCookies.push({ name, value, options }),
+            );
             Object.assign(pendingHeaders, headersToSet);
           },
         },
@@ -65,7 +76,16 @@ export async function GET(req: NextRequest) {
         pendingHeaders,
       );
     }
+
+    // Surface the real Supabase error so it is visible in the URL and server logs.
+    console.error('[auth/callback] exchangeCodeForSession failed:', error.message);
+    const url = new URL('/login', origin);
+    url.searchParams.set('error', 'auth_callback_failed');
+    url.searchParams.set('detail', error.message);
+    return NextResponse.redirect(url.toString());
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  // No code parameter — Supabase redirect URL is probably not whitelisted.
+  console.error('[auth/callback] no code in request — check Supabase redirect URL allowlist');
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed&detail=no_code`);
 }
