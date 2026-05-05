@@ -1,4 +1,6 @@
 // OAuth / magic-link callback: exchanges Supabase's code for SSR auth cookies.
+export const runtime = 'nodejs';
+
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';

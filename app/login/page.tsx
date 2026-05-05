@@ -68,7 +68,10 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+      // NEXT_PUBLIC_SITE_URL should be set in Vercel env vars to the production URL.
+      // Falls back to the current origin for local dev.
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || window.location.origin;
+      const callbackUrl = new URL('/api/auth/callback', siteUrl);
       callbackUrl.searchParams.set('next', getSafeNextTarget());
 
       const { error } = await supabase.auth.signInWithOAuth({
