@@ -1,43 +1,27 @@
 # Database Setup
 
-This folder contains all SQL scripts required to set up the MyIncome application database in Supabase.
+All database objects live in a single file: **`schema.sql`**.
 
-## Setup Instructions
+## Setup
 
-Run these SQL files **in order** in your Supabase SQL Editor:
+1. Open the [Supabase SQL Editor](https://supabase.com/dashboard) for your project.
+2. Paste the entire contents of `schema.sql` and run it.
+3. Done — all tables, indexes, views, the Auth trigger, and RLS policies are created.
 
-1. **01_auth_users.sql** - Creates the users table for authentication
-2. **02_auth_refresh_tokens.sql** - Creates the refresh tokens table for session management
-3. **03_transactions.sql** - Creates the transactions table for income/expense records
-4. **04_user_shares.sql** - Creates the sharing table for multi-user access
-5. **05_accessible_users_view.sql** - Creates a view for efficient permission queries
+Every statement uses `IF NOT EXISTS` / `CREATE OR REPLACE` / `DROP … IF EXISTS`, so the file is safe to re-run at any time without data loss.
 
-## Tables Overview
+## What's included
 
-### auth_users
-Stores user account information (email, username, password hash, Google ID)
+| Object | Description |
+|---|---|
+| `auth_users` | Application profile — one row per user, `id` mirrors `auth.users.id` |
+| `auth_refresh_tokens` | Legacy token table, kept for data compatibility |
+| `transactions` | Income records (type: `cash` / `bit` / `bank`) |
+| `user_shares` | Tracks which users share their data with others |
+| `accessible_users` | View: all user IDs a given user may read |
+| `handle_new_supabase_user` | Trigger: auto-creates a profile for every new Supabase Auth signup (email & Google) |
+| RLS policies | Row-level security on all three tables |
 
-### auth_refresh_tokens
-Manages user sessions with refresh tokens
+## Migration from custom-auth
 
-### transactions
-Stores all financial transactions (income and expenses) with categories and dates
-
-### user_shares
-Tracks which users have shared their data with other users
-
-### accessible_users (view)
-Helper view that returns all user IDs accessible to a given user
-- Returns user's own ID
-- Returns IDs of users who shared their data with them
-
-## Quick Setup (All at Once)
-
-You can also run all scripts together in order by copying them sequentially into the Supabase SQL Editor.
-
-## Notes
-
-- All tables use UUIDs for primary keys
-- Foreign keys are set with CASCADE DELETE for data integrity
-- Indexes are created for optimal query performance
-- The `accessible_users` view enables efficient multi-user data access
+If you are migrating an existing deployment that used its own JWT/bcrypt auth, uncomment **section 8** at the bottom of `schema.sql` and run it once to import existing users into Supabase Auth.

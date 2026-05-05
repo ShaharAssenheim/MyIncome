@@ -1,34 +1,53 @@
 -- =============================================================================
 -- MyIncome — Complete Database Schema
--- Run once in the Supabase SQL Editor for a fresh install.
+-- Single source of truth. Run once in the Supabase SQL Editor.
+-- Safe to re-run: all statements use IF NOT EXISTS / CREATE OR REPLACE.
 -- =============================================================================
+
 
 -- ---------------------------------------------------------------------------
 -- 1. auth_users
---    Profile table. One row per user, id mirrors auth.users.id.
+--    Application profile table. id mirrors auth.users.id.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS auth_users (
-  id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  email        text        UNIQUE NOT NULL,
-  username     text        UNIQUE NOT NULL,
-  password_hash text       NOT NULL,           -- 'supabase-auth' for new signups
-  google_id    text        UNIQUE,             -- legacy column, kept for data compat
-  created_at   timestamptz NOT NULL DEFAULT now()
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  email         text        UNIQUE NOT NULL,
+  username      text        UNIQUE NOT NULL,
+  password_hash text        NOT NULL,  -- always 'supabase-auth' for new signups
+  google_id     text        UNIQUE,    -- kept for data compatibility
+  created_at    timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS auth_users_email_idx    ON auth_users(email);
-CREATE INDEX IF NOT EXISTS auth_users_username_idx ON auth_users(username);
+CREATE INDEX IF NOT EXISTS auth_users_email_idx     ON auth_users(email);
+CREATE INDEX IF NOT EXISTS auth_users_username_idx  ON auth_users(username);
 CREATE INDEX IF NOT EXISTS auth_users_google_id_idx ON auth_users(google_id) WHERE google_id IS NOT NULL;
 
 
 -- ---------------------------------------------------------------------------
--- 2. transactions
+-- 2. auth_refresh_tokens  (legacy — Supabase manages tokens internally now)
+--    Kept so existing foreign keys / data are preserved on older installs.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS auth_refresh_tokens (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid        NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+  token_hash  text        NOT NULL,
+  expires_at  timestamptz NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(user_id, token_hash)
+);
+
+CREATE INDEX IF NOT EXISTS auth_refresh_tokens_user_id_idx  ON auth_refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS auth_refresh_tokens_expires_at_idx ON auth_refresh_tokens(expires_at);
+
+
+-- ---------------------------------------------------------------------------
+-- 3. transactions
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS transactions (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     uuid        NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
   amount      numeric     NOT NULL,
-  type        text        NOT NULL,
+  type        text        NOT NULL,   -- 'cash' | 'bit' | 'bank'
   description text,
   date        date        NOT NULL,
   created_at  timestamptz NOT NULL DEFAULT now()
@@ -41,14 +60,14 @@ CREATE INDEX IF NOT EXISTS transactions_user_date_idx ON transactions(user_id, d
 
 
 -- ---------------------------------------------------------------------------
--- 3. user_shares
+-- 4. user_shares
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS user_shares (
-  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id          uuid        NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
-  shared_with_email text        NOT NULL,
-  shared_with_id    uuid        REFERENCES auth_users(id) ON DELETE CASCADE,
-  can_edit          boolean     NOT NULL DEFAULT true,
+  id                uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id          uuid    NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+  shared_with_email text    NOT NULL,
+  shared_with_id    uuid    REFERENCES auth_users(id) ON DELETE CASCADE,
+  can_edit          boolean NOT NULL DEFAULT true,
   created_at        timestamptz NOT NULL DEFAULT now(),
   UNIQUE(owner_id, shared_with_email)
 );
@@ -58,8 +77,9 @@ CREATE INDEX IF NOT EXISTS user_shares_shared_with_idx ON user_shares(shared_wit
 
 
 -- ---------------------------------------------------------------------------
--- 4. accessible_users view
---    Returns all user IDs a given user can see (own + shared-with-them).
+-- 5. accessible_users view
+--    Returns every (user_id, accessible_id) pair:
+--    own rows + rows from users who shared their data with this user.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW accessible_users
   WITH (security_invoker = true)
@@ -79,8 +99,8 @@ WHERE user_shares.shared_with_id IS NOT NULL;
 
 
 -- ---------------------------------------------------------------------------
--- 5. Supabase Auth trigger
---    Auto-creates an auth_users profile for every new Supabase Auth signup
+-- 6. Supabase Auth trigger
+--    Auto-creates an auth_users profile row for every new signup
 --    (email/password and Google OAuth).
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.handle_new_supabase_user()
@@ -92,19 +112,31 @@ AS $$
 DECLARE
   v_username text;
 BEGIN
+  -- Derive a username: prefer explicit username meta, then Google full_name, then email prefix
   v_username := COALESCE(
     NULLIF(NEW.raw_user_meta_data->>'username', ''),
     NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
     split_part(NEW.email, '@', 1)
   );
 
+  -- Ensure uniqueness by appending a short UUID fragment when needed
   IF EXISTS (SELECT 1 FROM public.auth_users WHERE username = v_username) THEN
     v_username := v_username || '_' || substr(NEW.id::text, 1, 6);
   END IF;
 
-  INSERT INTO public.auth_users (id, email, username, password_hash)
-  VALUES (NEW.id, NEW.email, v_username, 'supabase-auth')
-  ON CONFLICT DO NOTHING;
+  INSERT INTO public.auth_users (id, email, username, password_hash, google_id)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    v_username,
+    'supabase-auth',
+    CASE
+      WHEN NEW.app_metadata->>'provider' = 'google'
+      THEN NEW.raw_user_meta_data->>'sub'
+      ELSE NULL
+    END
+  )
+  ON CONFLICT (id) DO NOTHING;
 
   RETURN NEW;
 END;
@@ -117,10 +149,109 @@ CREATE TRIGGER on_auth_user_created
 
 
 -- ---------------------------------------------------------------------------
--- 6. Import existing users into Supabase Auth  (run once on migration)
---    Preserves bcrypt passwords so users don't need to reset them.
---    Skip this block on a fresh install.
+-- 7. Row Level Security
+--    API routes use the service-role key which bypasses RLS entirely.
+--    These policies are a second layer of defence if the anon key is used.
 -- ---------------------------------------------------------------------------
+ALTER TABLE auth_users   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_shares  ENABLE ROW LEVEL SECURITY;
+
+-- auth_users ---
+DROP POLICY IF EXISTS "auth_users: select own and related" ON auth_users;
+CREATE POLICY "auth_users: select own and related"
+ON auth_users FOR SELECT
+USING (
+  id = auth.uid()
+  OR id IN (SELECT owner_id       FROM user_shares WHERE shared_with_id = auth.uid())
+  OR id IN (SELECT shared_with_id FROM user_shares WHERE owner_id = auth.uid() AND shared_with_id IS NOT NULL)
+);
+
+DROP POLICY IF EXISTS "auth_users: update own" ON auth_users;
+CREATE POLICY "auth_users: update own"
+ON auth_users FOR UPDATE
+USING (id = auth.uid())
+WITH CHECK (id = auth.uid());
+
+DROP POLICY IF EXISTS "auth_users: no direct insert" ON auth_users;
+CREATE POLICY "auth_users: no direct insert"
+ON auth_users FOR INSERT
+WITH CHECK (false);
+
+-- transactions ---
+DROP POLICY IF EXISTS "transactions: select own and shared" ON transactions;
+CREATE POLICY "transactions: select own and shared"
+ON transactions FOR SELECT
+USING (
+  user_id = auth.uid()
+  OR EXISTS (
+    SELECT 1 FROM user_shares
+    WHERE owner_id = transactions.user_id
+      AND shared_with_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "transactions: insert own" ON transactions;
+CREATE POLICY "transactions: insert own"
+ON transactions FOR INSERT
+WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "transactions: update own and editable shares" ON transactions;
+CREATE POLICY "transactions: update own and editable shares"
+ON transactions FOR UPDATE
+USING (
+  user_id = auth.uid()
+  OR EXISTS (
+    SELECT 1 FROM user_shares
+    WHERE owner_id = transactions.user_id
+      AND shared_with_id = auth.uid()
+      AND can_edit = true
+  )
+);
+
+DROP POLICY IF EXISTS "transactions: delete own and editable shares" ON transactions;
+CREATE POLICY "transactions: delete own and editable shares"
+ON transactions FOR DELETE
+USING (
+  user_id = auth.uid()
+  OR EXISTS (
+    SELECT 1 FROM user_shares
+    WHERE owner_id = transactions.user_id
+      AND shared_with_id = auth.uid()
+      AND can_edit = true
+  )
+);
+
+-- user_shares ---
+DROP POLICY IF EXISTS "user_shares: select own" ON user_shares;
+CREATE POLICY "user_shares: select own"
+ON user_shares FOR SELECT
+USING (owner_id = auth.uid() OR shared_with_id = auth.uid());
+
+DROP POLICY IF EXISTS "user_shares: insert own" ON user_shares;
+CREATE POLICY "user_shares: insert own"
+ON user_shares FOR INSERT
+WITH CHECK (owner_id = auth.uid());
+
+DROP POLICY IF EXISTS "user_shares: update own" ON user_shares;
+CREATE POLICY "user_shares: update own"
+ON user_shares FOR UPDATE
+USING (owner_id = auth.uid())
+WITH CHECK (owner_id = auth.uid());
+
+DROP POLICY IF EXISTS "user_shares: delete own" ON user_shares;
+CREATE POLICY "user_shares: delete own"
+ON user_shares FOR DELETE
+USING (owner_id = auth.uid());
+
+
+-- ---------------------------------------------------------------------------
+-- 8. Migration helper  (skip on a fresh install)
+--    Imports existing app users into Supabase Auth so they can log in
+--    without resetting their passwords.
+-- ---------------------------------------------------------------------------
+/*  UNCOMMENT AND RUN ONCE when migrating from a custom-auth setup:
+
 INSERT INTO auth.users (
   id, instance_id, email, encrypted_password,
   email_confirmed_at, raw_user_meta_data,
@@ -156,106 +287,4 @@ FROM public.auth_users au
 WHERE au.password_hash NOT IN ('oauth-google', 'supabase-auth')
 ON CONFLICT (provider, provider_id) DO NOTHING;
 
-
--- ---------------------------------------------------------------------------
--- 7. Row Level Security
---    API routes use the service role key which bypasses RLS entirely.
---    These policies protect the tables if the anon key is ever used directly.
--- ---------------------------------------------------------------------------
-
--- Enable RLS on all tables
-ALTER TABLE auth_users   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_shares  ENABLE ROW LEVEL SECURITY;
-
--- ---- auth_users policies ----
-
--- Users can read their own profile + profiles of people they share with / share to
-CREATE POLICY "auth_users: select own and related"
-ON auth_users FOR SELECT
-USING (
-  id = auth.uid()
-  OR id IN (SELECT owner_id      FROM user_shares WHERE shared_with_id = auth.uid())
-  OR id IN (SELECT shared_with_id FROM user_shares WHERE owner_id = auth.uid() AND shared_with_id IS NOT NULL)
-);
-
--- Users can only update their own profile
-CREATE POLICY "auth_users: update own"
-ON auth_users FOR UPDATE
-USING (id = auth.uid())
-WITH CHECK (id = auth.uid());
-
--- Inserts are handled by the SECURITY DEFINER trigger; block direct inserts via anon key
-CREATE POLICY "auth_users: no direct insert"
-ON auth_users FOR INSERT
-WITH CHECK (false);
-
-
--- ---- transactions policies ----
-
--- Read own transactions + transactions of users who shared with the current user
-CREATE POLICY "transactions: select own and shared"
-ON transactions FOR SELECT
-USING (
-  user_id = auth.uid()
-  OR EXISTS (
-    SELECT 1 FROM user_shares
-    WHERE owner_id = transactions.user_id
-      AND shared_with_id = auth.uid()
-  )
-);
-
--- Insert only for own user_id
-CREATE POLICY "transactions: insert own"
-ON transactions FOR INSERT
-WITH CHECK (user_id = auth.uid());
-
--- Update own transactions + shared users with can_edit = true
-CREATE POLICY "transactions: update own and editable shares"
-ON transactions FOR UPDATE
-USING (
-  user_id = auth.uid()
-  OR EXISTS (
-    SELECT 1 FROM user_shares
-    WHERE owner_id = transactions.user_id
-      AND shared_with_id = auth.uid()
-      AND can_edit = true
-  )
-);
-
--- Delete own transactions + shared users with can_edit = true
-CREATE POLICY "transactions: delete own and editable shares"
-ON transactions FOR DELETE
-USING (
-  user_id = auth.uid()
-  OR EXISTS (
-    SELECT 1 FROM user_shares
-    WHERE owner_id = transactions.user_id
-      AND shared_with_id = auth.uid()
-      AND can_edit = true
-  )
-);
-
-
--- ---- user_shares policies ----
-
--- Owner sees all their shares; recipient sees shares they appear in
-CREATE POLICY "user_shares: select own"
-ON user_shares FOR SELECT
-USING (
-  owner_id = auth.uid()
-  OR shared_with_id = auth.uid()
-);
-
-CREATE POLICY "user_shares: insert own"
-ON user_shares FOR INSERT
-WITH CHECK (owner_id = auth.uid());
-
-CREATE POLICY "user_shares: update own"
-ON user_shares FOR UPDATE
-USING (owner_id = auth.uid())
-WITH CHECK (owner_id = auth.uid());
-
-CREATE POLICY "user_shares: delete own"
-ON user_shares FOR DELETE
-USING (owner_id = auth.uid());
+*/
