@@ -8,9 +8,11 @@ Run **finance-migration.local.sql** in the existing MyIncome Supabase project.
 
 The file contains the application schema, finance tables, access policies, import function, both original savings JSON datasets, and all nine parsed bank statements. Data is assigned to the existing Shahar profile identified in the script.
 
-The `person` field separates manual income for Kristin and Shahar. Existing income records default to Kristin. Shahar's payroll is displayed as bank-transfer income in the month of receipt.
+The `person` field separates manual income for Kristin and Shahar. Existing income records default to Kristin. Imported Shahar payroll is displayed as bank-transfer income in the previous calendar month (the work month). A January receipt belongs to December of the preceding year. Each salary entry also shows its original bank receipt date.
 
 Payroll now has a dedicated `shahar_salaries` table with payment date, generated year and month, amount, employer when identified, and a unique link to the bank transaction. The migration backfills existing payroll. A trigger captures future salary imports. Re-imports preserve edited or soft-deleted salary records.
+
+`payment_date` and the generated database `year`/`month` retain the receipt date. The application derives the work month from that source on each read, before applying monthly overrides, so existing records and future imports follow the same rule without moving a salary twice. Manual income and salaries without a bank source retain their assigned dates. Existing manual month totals, including Shahar's October 2019 correction, remain unchanged. The JSON export includes a derived `salary_month` alongside each salary's original payment fields. This correction requires no database migration.
 
 On either income page, choose a month and use the administrator's monthly edit button to set the cash, Bit, and bank-transfer totals. `monthly_income_overrides` stores those totals and the editing administrator. The original receipts remain available, with an adjustment entry explaining the difference. New imports preserve an explicitly edited month's totals. Concurrent saves require the latest version and return a conflict instead of overwriting another edit.
 

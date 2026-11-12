@@ -22,7 +22,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test:income": "node --test tests/income.test.cjs"
   },
   "engines": {
     "node": ">=20.0.0",

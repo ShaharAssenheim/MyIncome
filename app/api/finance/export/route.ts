@@ -1,4 +1,5 @@
 import admin from "../../../../lib/supabase/admin";
+import { salaryIncomeDate } from "../../../../lib/income";
 import {
   readBankTransactions,
   readFinanceRows,
@@ -30,7 +31,13 @@ export async function GET() {
           ?.payload,
         imports: imports.data,
         transactions,
-        salaries,
+        salaries: salaries.map((row) => ({
+          ...row,
+          salary_month: salaryIncomeDate(
+            row.payment_date,
+            Boolean(row.bank_transaction_id),
+          ).slice(0, 7),
+        })),
         overrides,
         income,
       },

@@ -41,6 +41,6 @@ async function readFinanceOverview(): Promise<FinanceData> {
 
 export const loadFinanceOverview = unstable_cache(
   readFinanceOverview,
-  ["finance-overview-v2"],
+  ["finance-overview-v3-work-month"],
   { revalidate: 30, tags: ["finance-data"] },
 );

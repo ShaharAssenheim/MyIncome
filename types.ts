@@ -1,7 +1,7 @@
 export enum IncomeType {
-  CASH = 'CASH',
-  BIT = 'BIT',
-  BANK = 'BANK'
+  CASH = "CASH",
+  BIT = "BIT",
+  BANK = "BANK",
 }
 
 export interface Transaction {
@@ -10,6 +10,7 @@ export interface Transaction {
   amount: number;
   type: IncomeType;
   date: string; // ISO string
+  paymentDate?: string; // Original salary receipt, separate from the work month.
   description?: string;
   createdAt: string; // ISO string
 }

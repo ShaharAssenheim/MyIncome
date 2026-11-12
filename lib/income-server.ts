@@ -1,6 +1,11 @@
 import admin from "./supabase/admin";
 import { unstable_cache } from "next/cache";
-import { applyMonthlyOverrides, IncomeRow, MonthOverride } from "./income";
+import {
+  applyMonthlyOverrides,
+  IncomeRow,
+  MonthOverride,
+  salaryToIncome,
+} from "./income";
 
 async function readManual(person: "kristin" | "shahar") {
   const manual: IncomeRow[] = [];
@@ -25,25 +30,15 @@ async function readSalaries(person: "kristin" | "shahar") {
     for (let offset = 0; ; offset += 1000) {
       const { data, error } = await admin
         .from("shahar_salaries")
-        .select("id,payment_date,amount,employer,created_at")
+        .select(
+          "id,bank_transaction_id,payment_date,amount,employer,created_at",
+        )
         .eq("is_deleted", false)
         .order("payment_date")
         .order("id")
         .range(offset, offset + 999);
       if (error) throw error;
-      salary.push(
-        ...data.map((row) => ({
-          id: `salary-${row.id}`,
-          date: row.payment_date,
-          amount: Number(row.amount),
-          type: "bank",
-          employer: row.employer,
-          description: row.employer
-            ? `משכורת · ${row.employer}`
-            : "משכורת · המעסיק לא זוהה בדוח",
-          created_at: row.created_at,
-        })),
-      );
+      salary.push(...data.map(salaryToIncome));
       if (data.length < 1000) break;
     }
   }
@@ -77,7 +72,7 @@ async function loadIncome(person: "kristin" | "shahar") {
   };
 }
 
-export const readIncome = unstable_cache(loadIncome, ["income-v2"], {
+export const readIncome = unstable_cache(loadIncome, ["income-v3-work-month"], {
   revalidate: 30,
   tags: ["finance-data"],
 });

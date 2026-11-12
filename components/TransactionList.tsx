@@ -59,11 +59,21 @@ export function TransactionList({
                 )}
               </div>
               <div className="ui-entry-actions">
-                <time className="text-xs text-slate-500" dateTime={t.date}>
-                  {new Date(t.date).toLocaleDateString("he-IL", {
-                    day: "2-digit",
-                    month: "2-digit",
-                  })}
+                <time
+                  className="text-xs text-slate-500"
+                  dateTime={t.paymentDate ?? t.date}
+                  title={t.paymentDate ? "תאריך קבלת המשכורת בבנק" : undefined}
+                >
+                  {t.paymentDate && "התקבל ב־"}
+                  {new Date(t.paymentDate ?? t.date).toLocaleDateString(
+                    "he-IL",
+                    {
+                      day: "2-digit",
+                      month: "2-digit",
+                      ...(t.paymentDate ? { year: "numeric" as const } : {}),
+                      timeZone: "Asia/Jerusalem",
+                    },
+                  )}
                 </time>
                 {canDelete &&
                   !t.readOnly &&

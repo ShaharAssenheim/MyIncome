@@ -21,11 +21,12 @@ const MonthIncomeEditor = dynamic(() =>
 import { TransactionList } from "../components/TransactionList";
 import { useAuth } from "../lib/useAuth";
 
-const mapRowToTransaction = (row: any): Transaction => ({
+const mapRowToTransaction = (row: IncomeRow): Transaction => ({
   id: row.id,
   amount: row.amount,
   type: row.type.toUpperCase() as IncomeType,
   date: row.date,
+  paymentDate: row.payment_date,
   description: row.description ?? undefined,
   createdAt: row.created_at,
   readOnly: row.read_only ?? false,
@@ -143,7 +144,8 @@ export function IncomeDashboard({
         </h1>
         {person === "shahar" && (
           <p className="ui-page-description mb-6">
-            משכורות מדוחות הבנק מוצגות כהעברה בנקאית לפי חודש הקבלה.{" "}
+            משכורות מדוחות הבנק משויכות לחודש העבודה שקדם לקבלתן. תאריך הקבלה
+            מוצג לצד כל משכורת.{" "}
             <Link href="/" className="text-indigo-600 underline">
               ייבוא דוחות וניהול החשבון בסקירה הכללית
             </Link>
