@@ -1,6 +1,6 @@
 "use client";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "./ui/button";
 export function MonthSelector({
   currentDate,
   onPrevMonth,
@@ -11,41 +11,35 @@ export function MonthSelector({
   onNextMonth: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-1.5">
-      <button
+    <div className="flex items-center justify-between gap-1 rounded-lg bg-muted p-1">
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-sm"
         onClick={onPrevMonth}
-        className="ui-icon-btn"
         aria-label="חודש קודם"
-        title="חודש קודם"
       >
-        <ChevronRight size={19} />
-      </button>
-      <div className="flex items-center justify-center gap-2.5 px-2">
-        <CalendarDays
-          size={17}
-          className="text-indigo-500"
-          aria-hidden="true"
-        />
-        <h2
-          className="whitespace-nowrap text-sm font-semibold text-slate-800"
-          aria-live="polite"
-        >
-          {new Intl.DateTimeFormat("he-IL", {
-            month: "long",
-            year: "numeric",
-          }).format(currentDate)}
-        </h2>
-      </div>
-      <button
+        <ChevronRight />
+      </Button>
+      <h2
+        className="flex min-w-36 items-center justify-center gap-2 px-2 text-sm font-medium"
+        aria-live="polite"
+      >
+        <CalendarDays size={15} className="text-primary" aria-hidden="true" />
+        {new Intl.DateTimeFormat("he-IL", {
+          month: "long",
+          year: "numeric",
+        }).format(currentDate)}
+      </h2>
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-sm"
         onClick={onNextMonth}
-        className="ui-icon-btn"
         aria-label="חודש הבא"
-        title="חודש הבא"
       >
-        <ChevronLeft size={19} />
-      </button>
+        <ChevronLeft />
+      </Button>
     </div>
   );
 }

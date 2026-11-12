@@ -1,7 +1,18 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
-import { IncomeType } from "../types";
 import { CATEGORIES } from "../constants";
+import { IncomeType } from "../types";
 import { AppDialog } from "./AppDialog";
 export function TransactionModal({
   isOpen,
@@ -40,54 +51,57 @@ export function TransactionModal({
       onClose={onClose}
       busy={saving}
     >
-      <form onSubmit={save} className="space-y-5">
-        <label className="ui-field">
-          <span className="ui-label">סכום בש״ח</span>
-          <input
-            autoFocus
-            className="ui-input ui-number text-xl"
-            type="number"
-            inputMode="decimal"
-            required
-            min="0.01"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-          />
-        </label>
-        <label className="ui-field">
-          <span className="ui-label">
-            הערה <span className="font-normal text-slate-400">· לא חובה</span>
-          </span>
-          <input
-            className="ui-input"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="מקור ההכנסה או פרטים נוספים"
-          />
-        </label>
-        {error && (
-          <p className="ui-alert" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-5">
-          <button
-            type="button"
-            className="ui-btn-secondary"
-            disabled={saving}
-            onClick={onClose}
-          >
-            ביטול
-          </button>
-          <button
-            className="ui-btn-primary"
-            disabled={saving || !amount || Number(amount) <= 0}
-          >
-            {saving ? "שומר…" : "שמירת הכנסה"}
-          </button>
-        </div>
+      <form onSubmit={save}>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="new-income-amount">סכום בש״ח</FieldLabel>
+            <Input
+              id="new-income-amount"
+              autoFocus
+              type="number"
+              inputMode="decimal"
+              required
+              min="0.01"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="new-income-note">הערה</FieldLabel>
+            <Input
+              id="new-income-note"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="מקור ההכנסה או פרטים נוספים"
+            />
+            <FieldDescription>לא חובה</FieldDescription>
+          </Field>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <Separator />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={onClose}
+            >
+              ביטול
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving || !amount || Number(amount) <= 0}
+            >
+              {saving && <Spinner data-icon="inline-start" />}
+              {saving ? "שומר…" : "שמירת הכנסה"}
+            </Button>
+          </div>
+        </FieldGroup>
       </form>
     </AppDialog>
   );

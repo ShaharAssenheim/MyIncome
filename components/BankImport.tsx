@@ -1,7 +1,19 @@
 "use client";
-import { useRef, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { FileCheck, FileSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
-
+import { useRef, useState } from "react";
 export function BankImport({ onImported }: { onImported: () => void }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
@@ -17,7 +29,6 @@ export function BankImport({ onImported }: { onImported: () => void }) {
   const [message, setMessage] = useState("");
   const [hasError, setHasError] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-
   async function upload(previewOnly: boolean) {
     if (!file) return;
     setBusy(true);
@@ -52,62 +63,80 @@ export function BankImport({ onImported }: { onImported: () => void }) {
       setBusy(false);
     }
   }
-
   return (
-    <section className="ui-panel border-indigo-200">
-      <h2 className="mb-2 font-bold text-slate-800">ייבוא דוח בנק</h2>
-      <p className="mb-4 text-sm text-slate-600">
-        תדפיס תנועות חודשי של בנק הפועלים, PDF עד 4MB. תנועות קיימות מזוהות גם
-        בדוחות חופפים.
-      </p>
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          ref={input}
-          aria-label="דוח בנק לייבוא"
-          type="file"
-          accept=".pdf"
-          disabled={busy}
-          className="max-w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm file:ml-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-2 file:text-slate-700"
-          onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null);
-            setPreview(null);
-            setMessage("");
-          }}
-        />
-        <button
-          disabled={!file || busy}
-          onClick={() => upload(true)}
-          className="ui-btn-secondary"
-        >
-          {busy ? "מעבד את הדוח…" : "בדיקת הדוח"}
-        </button>
-      </div>
-      {preview && (
-        <div className="mt-5 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 text-sm">
-          <p>
-            חשבון המסתיים ב־{preview.account.slice(-4)} · {preview.from} —{" "}
-            {preview.to}
-          </p>
-          <p className="my-2">
-            {preview.rows} תנועות, מתוכן {preview.salaries} תנועות שכר.
-          </p>
-          <button
-            disabled={busy}
-            onClick={() => upload(false)}
-            className="ui-btn-primary"
+    <Card>
+      <CardHeader>
+        <CardTitle>ייבוא דוח בנק</CardTitle>
+        <CardDescription>
+          תדפיס תנועות של בנק הפועלים בקובץ PDF, עד 4MB. תנועות קיימות מזוהות גם
+          בדוחות חופפים.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="bank-pdf">בחירת דוח להעלאה</FieldLabel>
+            <Input
+              id="bank-pdf"
+              ref={input}
+              type="file"
+              accept=".pdf"
+              disabled={busy}
+              className="h-auto border-dashed p-4"
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null);
+                setPreview(null);
+                setMessage("");
+              }}
+            />
+          </Field>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!file || busy}
+            className="self-start"
+            onClick={() => upload(true)}
           >
-            ייבוא למסד הנתונים
-          </button>
-        </div>
-      )}
-      {message && (
-        <p
-          role={hasError ? "alert" : "status"}
-          className={`mt-4 ${hasError ? "ui-alert" : "ui-success"}`}
-        >
-          {message}
-        </p>
-      )}
-    </section>
+            {busy ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <FileSearch data-icon="inline-start" />
+            )}
+            {busy ? "מעבד את הדוח…" : "בדיקת הדוח"}
+          </Button>
+          {preview && (
+            <Alert>
+              <FileCheck />
+              <AlertTitle>הדוח מוכן לייבוא</AlertTitle>
+              <AlertDescription>
+                <p>
+                  חשבון המסתיים ב־{preview.account.slice(-4)} · {preview.from} —{" "}
+                  {preview.to}
+                </p>
+                <p>
+                  {preview.rows} תנועות, מתוכן {preview.salaries} תנועות שכר.
+                </p>
+                <Button
+                  type="button"
+                  disabled={busy}
+                  className="mt-3"
+                  onClick={() => upload(false)}
+                >
+                  ייבוא למסד הנתונים
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          {message && (
+            <Alert
+              variant={hasError ? "destructive" : "default"}
+              role={hasError ? "alert" : "status"}
+            >
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          )}
+        </FieldGroup>
+      </CardContent>
+    </Card>
   );
 }

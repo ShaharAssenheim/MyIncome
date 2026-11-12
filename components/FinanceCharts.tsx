@@ -23,7 +23,7 @@ export function SavingsChart({ data }: { data: SavingsMonth[] }) {
       <ResponsiveContainer>
         <LineChart data={data} accessibilityLayer>
           <CartesianGrid
-            stroke="#edf0f6"
+            stroke="var(--border)"
             strokeDasharray="3 3"
             vertical={false}
           />
@@ -32,20 +32,20 @@ export function SavingsChart({ data }: { data: SavingsMonth[] }) {
             minTickGap={35}
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 11, fill: "#64748b" }}
+            tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
           />
           <YAxis
             width={65}
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 11, fill: "#64748b" }}
+            tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
             tickFormatter={(value) => `${Math.round(value / 1000)}k`}
           />
           <Tooltip formatter={(value) => money(Number(value))} />
           <Line
             name="סך חיסכון"
             dataKey="total"
-            stroke="#4f46e5"
+            stroke="var(--primary)"
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}
@@ -72,27 +72,27 @@ export function SalaryChart({
           <BarChart data={data} accessibilityLayer>
             <CartesianGrid
               vertical={false}
-              stroke="#edf0f6"
+              stroke="var(--border)"
               strokeDasharray="3 3"
             />
             <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: "#64748b" }}
+              tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
             />
             <YAxis
               width={65}
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: "#64748b" }}
+              tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
               tickFormatter={(value) => `${Math.round(value / 1000)}k`}
             />
             <Tooltip formatter={(value) => money(Number(value))} />
             <Bar
               name="משכורות"
               dataKey="amount"
-              fill="#4f46e5"
+              fill="var(--primary)"
               maxBarSize={36}
               radius={[4, 4, 0, 0]}
               isAnimationActive={false}

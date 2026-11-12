@@ -1,15 +1,27 @@
 "use client";
+
+import { ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppDialog } from "./AppDialog";
-import { ShieldCheck } from "lucide-react";
-
-export function SiteAccessManagement() {
-  const [open, setOpen] = useState(false);
-  const [emails, setEmails] = useState<{ email: string }[]>([]);
+import { Alert, AlertDescription } from "./ui/alert";
+import { Button } from "./ui/button";
+import { Field, FieldGroup, FieldLabel } from "./ui/field";
+import { Input } from "./ui/input";
+export function SiteAccessManagement({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [emails, setEmails] = useState<
+    {
+      email: string;
+    }[]
+  >([]);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-
   async function load() {
     try {
       const response = await fetch("/api/access", { cache: "no-store" });
@@ -25,7 +37,6 @@ export function SiteAccessManagement() {
       load();
     }
   }, [open]);
-
   async function update(value: string, remove: boolean) {
     setBusy(true);
     setError("");
@@ -45,78 +56,69 @@ export function SiteAccessManagement() {
       setBusy(false);
     }
   }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="ui-btn-quiet"
-        aria-label="ניהול גישה"
-        aria-haspopup="dialog"
+  return open ? (
+    <AppDialog
+      title="ניהול גישה לאתר"
+      description="כל מייל מאושר יכול לצפות בכל נתוני האתר. הוספה, העלאה, עריכה ומחיקה זמינות רק למנהל. ביטול הרשאה חוסם גישה מהבקשה הבאה."
+      onClose={onClose}
+      busy={busy}
+      wide
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          update(email, false);
+        }}
       >
-        <ShieldCheck size={18} aria-hidden="true" />
-        <span className="hidden md:inline">ניהול גישה</span>
-      </button>
-      {open && (
-        <AppDialog
-          title="מורשים לכניסה לאתר"
-          onClose={() => setOpen(false)}
-          busy={busy}
-          wide
-        >
-          <p className="ui-dialog-description">
-            כל מייל מאושר יכול לצפות בכל נתוני האתר. הוספה, העלאה, עריכה ומחיקה
-            זמינות רק למנהל. ביטול הרשאה חוסם גישה החל מהבקשה הבאה.
-          </p>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              update(email, false);
-            }}
-            className="flex flex-wrap gap-2"
-          >
-            <input
-              autoFocus
-              aria-label="מייל לאישור"
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="ui-input min-w-0 flex-1"
-              dir="ltr"
-              placeholder="name@example.com"
-            />
-            <button disabled={busy} className="ui-btn-primary">
-              אישור כניסה
-            </button>
-          </form>
-          {error && (
-            <p role="alert" className="mt-3 text-sm text-rose-700">
-              {error}
-            </p>
-          )}
-          <ul className="mt-5 max-h-72 overflow-y-auto divide-y divide-slate-100">
-            {emails.map((item) => (
-              <li
-                key={item.email}
-                className="flex items-center justify-between gap-3 py-3"
-              >
-                <span dir="ltr" className="break-all text-sm">
-                  {item.email}
-                </span>
-                <button
-                  disabled={busy}
-                  onClick={() => update(item.email, true)}
-                  className="ui-btn-danger shrink-0"
-                >
-                  ביטול הרשאה
-                </button>
-              </li>
-            ))}
-          </ul>
-        </AppDialog>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="access-email">אישור כתובת מייל</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                id="access-email"
+                autoFocus
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="min-w-40 flex-1"
+                dir="ltr"
+                placeholder="name@example.com"
+              />
+              <Button type="submit" disabled={busy}>
+                <ShieldCheck data-icon="inline-start" />
+                אישור כניסה
+              </Button>
+            </div>
+          </Field>
+        </FieldGroup>
+      </form>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-    </>
-  );
+      <ul className="max-h-72 overflow-y-auto divide-y divide-border">
+        {emails.map((item) => (
+          <li
+            key={item.email}
+            className="flex items-center justify-between gap-3 py-3"
+          >
+            <span dir="ltr" className="break-all text-sm">
+              {item.email}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              disabled={busy}
+              onClick={() => update(item.email, true)}
+            >
+              ביטול הרשאה
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </AppDialog>
+  ) : null;
 }

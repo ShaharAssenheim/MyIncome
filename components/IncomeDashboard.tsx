@@ -1,26 +1,32 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PencilLine } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Transaction, IncomeType, MonthlyStats } from "../types";
-import { MonthSelector } from "../components/MonthSelector";
+import { useMemo, useState } from "react";
+import { CategoryCard } from "../components/CategoryCard";
 import {
   DynamicSummaryCard,
   DynamicTrendsChart,
 } from "../components/ClientCharts";
-import { CategoryCard } from "../components/CategoryCard";
-import dynamic from "next/dynamic";
+import { MonthSelector } from "../components/MonthSelector";
+import { TransactionList } from "../components/TransactionList";
 import { useDataQuery } from "../lib/client-data";
 import { IncomeRow } from "../lib/income";
 import { incomeDateParts } from "../lib/income-date";
+import { useAuth } from "../lib/useAuth";
+import { IncomeType, MonthlyStats, Transaction } from "../types";
 const TransactionModal = dynamic(() =>
   import("./TransactionModal.tsx").then((module) => module.TransactionModal),
 );
 const MonthIncomeEditor = dynamic(() =>
   import("./MonthIncomeEditor.tsx").then((module) => module.MonthIncomeEditor),
 );
-import { TransactionList } from "../components/TransactionList";
-import { useAuth } from "../lib/useAuth";
-
 const mapRowToTransaction = (row: IncomeRow): Transaction => ({
   id: row.id,
   amount: row.amount,
@@ -31,7 +37,6 @@ const mapRowToTransaction = (row: IncomeRow): Transaction => ({
   createdAt: row.created_at,
   readOnly: row.read_only ?? false,
 });
-
 export function IncomeDashboard({
   person,
   initialData,
@@ -57,7 +62,6 @@ export function IncomeDashboard({
   const [activeCategory, setActiveCategory] = useState<IncomeType | null>(null);
   const isLoading = query.loading;
   const [error, setError] = useState<string | null>(null);
-
   const handlePrevMonth = () => {
     setCurrentDate((prev) => {
       const newDate = new Date(prev.getFullYear(), prev.getMonth() - 1, 1);
@@ -98,7 +102,6 @@ export function IncomeDashboard({
       throw new Error("שמירת ההכנסה נכשלה. אפשר לנסות שוב.");
     }
   };
-
   const handleDeleteTransaction = async (id: string) => {
     if (!user?.isAdmin) return;
     try {
@@ -111,7 +114,6 @@ export function IncomeDashboard({
       setError("Failed to delete transaction");
     }
   };
-
   const currentMonthTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const tDate = new Date(t.date);
@@ -121,7 +123,6 @@ export function IncomeDashboard({
       );
     });
   }, [transactions, currentDate]);
-
   const stats: MonthlyStats = useMemo(() => {
     const initial: MonthlyStats = { total: 0, cash: 0, bit: 0, bank: 0 };
     return currentMonthTransactions.reduce((acc, curr) => {
@@ -135,55 +136,70 @@ export function IncomeDashboard({
       return acc;
     }, initial);
   }, [currentMonthTransactions]);
-
   return (
-    <main id="main-content" className="min-h-screen text-slate-900">
-      <div className="ui-page">
-        <h1 className="ui-page-title mb-3">
-          הכנסות {person === "shahar" ? "Shahar" : "Kristin"}
-        </h1>
-        {person === "shahar" && (
-          <p className="ui-page-description mb-6">
-            משכורות מדוחות הבנק משויכות לחודש העבודה שקדם לקבלתן. תאריך הקבלה
-            מוצג לצד כל משכורת.{" "}
-            <Link href="/" className="text-indigo-600 underline">
-              ייבוא דוחות וניהול החשבון בסקירה הכללית
-            </Link>
+    <main id="main-content">
+      <div className="ui-page flex flex-col gap-6">
+        <header>
+          <p className="page-eyebrow">
+            <span className="size-1.5 rounded-full bg-primary" />
+            PERSONAL INCOME
           </p>
-        )}
+          <h1 className="ui-page-title">
+            ההכנסות של {person === "shahar" ? "Shahar" : "Kristin"}
+          </h1>
+          <p className="ui-page-description">
+            {person === "shahar" ? (
+              <>
+                משכורות מדוחות הבנק משויכות לחודש העבודה שקדם לקבלתן.{" "}
+                <Link
+                  href="/"
+                  className="text-primary underline underline-offset-4"
+                >
+                  ייבוא דוחות בסקירה הכללית
+                </Link>
+              </>
+            ) : (
+              "מבט חודשי על ההכנסות שלכם, בכל קטגוריה ובכל שנה."
+            )}
+          </p>
+        </header>
         {(error || query.error) && (
-          <div className="ui-alert mb-6" role="alert">
-            {error || query.error}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error || query.error}</AlertDescription>
+          </Alert>
         )}
         {(isInitializing || isLoading) && transactions.length === 0 ? (
-          <div className="space-y-6">
-            <div className="h-12 bg-slate-200 animate-pulse rounded-xl w-full max-w-md mx-auto"></div>
-            <div className="h-32 bg-slate-200 animate-pulse rounded-2xl"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
-              <div className="h-40 bg-slate-200 animate-pulse rounded-2xl"></div>
-              <div className="h-40 bg-slate-200 animate-pulse rounded-2xl"></div>
-              <div className="h-40 bg-slate-200 animate-pulse rounded-2xl"></div>
+          <div
+            className="flex flex-col gap-5"
+            role="status"
+            aria-label="טוען הכנסות"
+          >
+            <Skeleton className="h-16" />
+            <Skeleton className="h-64" />
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-36" />
+              ))}
             </div>
-            <div className="h-64 bg-slate-200 animate-pulse rounded-2xl"></div>
           </div>
         ) : (
           <>
-            <div className="mb-6 flex flex-wrap items-center gap-3">
-              <div className="w-full sm:w-auto">
-                <div>
-                  <MonthSelector
-                    currentDate={currentDate}
-                    onPrevMonth={handlePrevMonth}
-                    onNextMonth={handleNextMonth}
-                  />
-                </div>
-              </div>
-              <label className="flex items-center gap-3 text-sm text-slate-600">
-                בחירת חודש
-                <input
+            <div className="filter-bar">
+              <MonthSelector
+                currentDate={currentDate}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+              />
+              <Separator
+                orientation="vertical"
+                className="mx-1 hidden h-6 sm:block"
+              />
+              <div className="flex items-center gap-2">
+                <Label htmlFor="income-month">בחירת חודש</Label>
+                <Input
+                  id="income-month"
                   type="month"
-                  aria-label="בחירת חודש להצגה ולעריכה"
+                  className="w-auto"
                   value={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`}
                   onChange={(event) => {
                     if (!/^\d{4}-\d{2}$/.test(event.target.value)) return;
@@ -192,51 +208,50 @@ export function IncomeDashboard({
                       .map(Number);
                     setCurrentDate(new Date(year, month - 1, 1));
                   }}
-                  className="ui-input w-auto"
                 />
-              </label>
+              </div>
               {user?.isAdmin && (
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setEditingMonth(true)}
-                  className="ui-btn-secondary sm:mr-auto"
+                  className="sm:ms-auto"
                 >
-                  עריכת סכומי החודש
-                </button>
+                  <PencilLine data-icon="inline-start" />
+                  עריכת החודש
+                </Button>
               )}
             </div>
             <DynamicSummaryCard stats={stats} />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <CategoryCard
-                type={IncomeType.CASH}
-                amount={stats.cash}
-                onAddClick={handleOpenAddModal}
-                canAdd={Boolean(user?.isAdmin)}
-              />
-              <CategoryCard
-                type={IncomeType.BIT}
-                amount={stats.bit}
-                onAddClick={handleOpenAddModal}
-                canAdd={Boolean(user?.isAdmin)}
-              />
-              <CategoryCard
-                type={IncomeType.BANK}
-                amount={stats.bank}
-                onAddClick={handleOpenAddModal}
-                canAdd={Boolean(user?.isAdmin)}
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[IncomeType.CASH, IncomeType.BIT, IncomeType.BANK].map(
+                (type) => (
+                  <CategoryCard
+                    key={type}
+                    type={type}
+                    amount={
+                      type === IncomeType.CASH
+                        ? stats.cash
+                        : type === IncomeType.BIT
+                          ? stats.bit
+                          : stats.bank
+                    }
+                    onAddClick={handleOpenAddModal}
+                    canAdd={Boolean(user?.isAdmin)}
+                  />
+                ),
+              )}
             </div>
             <DynamicTrendsChart
               transactions={transactions}
               currentDate={currentDate}
             />
-            <div className="w-full">
-              <TransactionList
-                transactions={currentMonthTransactions}
-                onDelete={handleDeleteTransaction}
-                canDelete={Boolean(user?.isAdmin)}
-                isLoading={isLoading}
-              />
-            </div>
+            <TransactionList
+              transactions={currentMonthTransactions}
+              onDelete={handleDeleteTransaction}
+              canDelete={Boolean(user?.isAdmin)}
+              isLoading={isLoading}
+            />
           </>
         )}
       </div>

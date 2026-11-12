@@ -1,5 +1,6 @@
-import { FinanceDashboard } from "../components/FinanceDashboard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Suspense } from "react";
+import { FinanceDashboard } from "../components/FinanceDashboard";
 import { loadFinanceOverview } from "../lib/finance-data";
 export const dynamic = "force-dynamic";
 async function OverviewContent() {
@@ -15,12 +16,12 @@ export default function OverviewPage() {
   return (
     <Suspense
       fallback={
-        <div
+        <Skeleton
           role="status"
-          className="mx-auto mt-8 h-64 max-w-6xl animate-pulse rounded-2xl bg-slate-100"
+          className="mx-auto mt-8 h-64 max-w-6xl  rounded-2xl bg-muted"
         >
           <span className="sr-only">טוען סקירה…</span>
-        </div>
+        </Skeleton>
       }
     >
       <OverviewContent />

@@ -1,13 +1,14 @@
 "use client";
-import React, { useMemo } from "react";
+import { TrendingUp, Wallet } from "lucide-react";
 import dynamic from "next/dynamic";
+import React, { useMemo } from "react";
+import { CATEGORIES } from "../constants";
+import { IncomeType, MonthlyStats } from "../types";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 const SummaryPie = dynamic(
   () => import("./SummaryPie.tsx").then((module) => module.SummaryPie),
   { ssr: false },
 );
-import { MonthlyStats, IncomeType } from "../types";
-import { CATEGORIES } from "../constants";
-import { TrendingUp, Wallet } from "lucide-react";
 
 interface SummaryCardProps {
   stats: MonthlyStats;
@@ -41,52 +42,65 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ stats }) => {
   }).format(stats.total);
 
   return (
-    <section className="ui-income-summary mb-5" aria-label="סיכום הכנסות החודש">
-      <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-        <div className="w-full sm:w-auto">
-          <p className="mb-4 flex items-center gap-2 text-sm text-indigo-200">
-            <TrendingUp size={17} aria-hidden="true" />
+    <Card
+      tone="hero"
+      className="income-hero gap-0"
+      aria-label="סיכום הכנסות החודש"
+    >
+      <CardHeader>
+        <CardTitle>
+          <span className="flex items-center gap-2 text-hero-foreground/70">
+            <TrendingUp size={16} />
             סך ההכנסות החודש
-          </p>
-          <p className="ui-income-summary-total">{formattedTotal}</p>
-          <p className="mt-4 text-xs text-slate-300">
-            מזומן, Bit והעברות בנקאיות
-          </p>
-        </div>
-        <div className="relative h-40 w-40 shrink-0" aria-hidden="true">
-          {stats.total > 0 ? (
-            <>
-              <SummaryPie data={data} />
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-slate-300">
-                התפלגות
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="hero-total">{formattedTotal}</p>
+            <p className="mt-5 text-xs text-hero-foreground/50">
+              מזומן, Bit והעברות בנקאיות
+            </p>
+          </div>
+          <div
+            className="relative hidden size-40 shrink-0 sm:block"
+            aria-hidden="true"
+          >
+            {stats.total > 0 ? (
+              <>
+                <SummaryPie data={data} />
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] text-hero-foreground/50">
+                  התפלגות
+                </span>
+              </>
+            ) : (
+              <div className="flex size-full items-center justify-center rounded-full border-[14px] border-white/10">
+                <Wallet size={26} />
               </div>
-            </>
-          ) : (
-            <div className="flex h-full items-center justify-center rounded-full border-[14px] border-white/10">
-              <Wallet size={26} className="text-slate-400" />
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-      {stats.total > 0 && (
-        <ul className="mt-6 flex flex-wrap gap-x-7 gap-y-3 border-t border-white/10 pt-5">
-          {data.map((item) => (
-            <li
-              key={item.name}
-              className="flex items-center gap-2 text-xs text-slate-300"
-            >
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              <span>{item.name}</span>
-              <span className="ui-number font-semibold text-white">
-                {((item.value / stats.total) * 100).toFixed(0)}%
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+        {stats.total > 0 && (
+          <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-3 border-t border-white/10 pt-5">
+            {data.map((item) => (
+              <li
+                key={item.name}
+                className="flex items-center gap-2 text-[11px] text-hero-foreground/60"
+              >
+                <span
+                  className="size-1.5 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                {item.name}
+                <span className="ui-number font-medium text-hero-foreground">
+                  {((item.value / stats.total) * 100).toFixed(0)}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 };

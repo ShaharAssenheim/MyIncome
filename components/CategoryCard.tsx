@@ -1,48 +1,58 @@
 "use client";
-import { CSSProperties } from "react";
 import { Plus } from "lucide-react";
-import { IncomeType } from "../types";
 import { CATEGORIES, getCategoryIcon } from "../constants";
-
-interface CategoryCardProps {
-  type: IncomeType;
-  amount: number;
-  onAddClick: (type: IncomeType) => void;
-  canAdd?: boolean;
-}
+import { IncomeType } from "../types";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 export function CategoryCard({
   type,
   amount,
   onAddClick,
   canAdd = true,
-}: CategoryCardProps) {
+}: {
+  type: IncomeType;
+  amount: number;
+  onAddClick: (type: IncomeType) => void;
+  canAdd?: boolean;
+}) {
   const category = CATEGORIES[type];
   return (
-    <article
-      className="ui-category"
-      style={{ "--category-color": category.color } as CSSProperties}
-    >
-      <div className="flex items-center justify-between">
-        <div className="ui-category-icon" aria-hidden="true">
-          {getCategoryIcon(type, 19)}
+    <Card size="sm">
+      <CardHeader>
+        <div className="flex items-center gap-2.5">
+          <span
+            className="metric-card-icon"
+            style={{
+              color: category.color,
+              background: `color-mix(in srgb, ${category.color} 9%, transparent)`,
+            }}
+            aria-hidden="true"
+          >
+            {getCategoryIcon(type, 17)}
+          </span>
+          <CardTitle>{category.label}</CardTitle>
         </div>
         {canAdd && (
-          <button
-            type="button"
-            onClick={() => onAddClick(type)}
-            className="ui-icon-btn -my-1 -ml-2"
-            aria-label={`הוסף הכנסה ל${category.label}`}
-            title={`הוסף הכנסה ל${category.label}`}
-          >
-            <Plus size={19} />
-          </button>
+          <CardAction>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`הוספת הכנסה ל${category.label}`}
+              onClick={() => onAddClick(type)}
+            >
+              <Plus />
+            </Button>
+          </CardAction>
         )}
-      </div>
-      <div>
-        <h3 className="mb-2 text-xs font-medium text-slate-500">
-          {category.label}
-        </h3>
-        <p className="ui-number text-3xl font-semibold text-slate-900">
+      </CardHeader>
+      <CardContent>
+        <p className="category-amount">
           {new Intl.NumberFormat("he-IL", {
             style: "currency",
             currency: "ILS",
@@ -50,7 +60,10 @@ export function CategoryCard({
             minimumFractionDigits: 0,
           }).format(amount)}
         </p>
-      </div>
-    </article>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          הכנסה בחודש הנבחר
+        </p>
+      </CardContent>
+    </Card>
   );
 }

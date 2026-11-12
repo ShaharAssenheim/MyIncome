@@ -1,9 +1,21 @@
 "use client";
-import React, { useState, useMemo, Suspense } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { ShieldCheck, WalletCards } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-
+import React, { Suspense, useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
-
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,7 +26,6 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextTarget = searchParams.get("next") || "/";
-
   // Show the real error from the callback URL (?error=...&detail=...)
   const callbackError = searchParams.get("error");
   const callbackDetail = searchParams.get("detail");
@@ -27,14 +38,11 @@ function LoginForm() {
           : "Authentication failed — check Supabase dashboard settings"
         : null,
   );
-
   const supabase = useMemo(() => createClient(), []);
-
   function getSafeNextTarget() {
     if (!nextTarget.startsWith("/") || nextTarget.startsWith("//")) return "/";
     return nextTarget;
   }
-
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -53,7 +61,6 @@ function LoginForm() {
       setLoading(false);
     }
   }
-
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -77,11 +84,9 @@ function LoginForm() {
       setLoading(false);
     }
   }
-
   async function handleGoogle() {
     setError(null);
     setLoading(true);
-
     try {
       // NEXT_PUBLIC_SITE_URL should be set in Vercel env vars to the production URL.
       // Falls back to the current origin for local dev.
@@ -90,7 +95,6 @@ function LoginForm() {
         window.location.origin;
       const callbackUrl = new URL("/api/auth/callback", siteUrl);
       callbackUrl.searchParams.set("next", getSafeNextTarget());
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -101,77 +105,81 @@ function LoginForm() {
           },
         },
       });
-
       if (error) throw error;
     } catch (e) {
       setLoading(false);
       setError(e instanceof Error ? e.message : "Google login failed");
     }
   }
-
   return (
-    <main id="main-content" className="ui-login" dir="rtl">
-      <aside className="ui-login-story">
-        <span className="ui-login-wordmark" dir="ltr">
-          MyIncome.
-        </span>
-        <div>
-          <span className="ui-login-eyebrow">התמונה הכלכלית שלכם</span>
-          <h2>
-            כל ההכנסות.
-            <br />
-            מקום אחד ברור.
-          </h2>
-          <p>
-            עוקבים אחרי ההכנסות של שחר וקריסטין, מבינים את המגמות ורואים את מצב
-            החשבון לאורך השנים.
-          </p>
-          <div className="ui-login-preview" aria-hidden="true">
-            <span>הכנסות · חיסכון · תמונה מלאה</span>
-            <div className="ui-login-bars">
-              {[36, 53, 43, 70, 58, 80, 66, 96, 82, 100, 90, 115].map(
-                (height, index) => (
-                  <i key={index} style={{ height }} />
-                ),
-              )}
-            </div>
-            <span className="text-xs text-indigo-200">
-              יותר בהירות. החלטות טובות יותר.
-            </span>
-          </div>
-        </div>
-        <p className="text-xs text-indigo-200">סביבת המידע המשפחתית שלכם</p>
-      </aside>
-      <section className="ui-login-form">
-        <div className="w-full max-w-sm">
-          <span
-            className="mb-8 block text-lg font-bold text-indigo-600 lg:hidden"
-            dir="ltr"
-          >
+    <main id="main-content" className="login-shell" dir="rtl">
+      <aside className="login-story">
+        <Link href="/" className="site-brand" aria-label="MyIncome">
+          <span className="brand-symbol">
+            <WalletCards size={21} />
+          </span>
+          <span className="brand-name" dir="ltr">
             MyIncome.
           </span>
+        </Link>
+        <div className="login-story-content">
+          <Badge variant="hero">המרחב הכלכלי המשפחתי שלכם</Badge>
+          <h2 className="mt-7">
+            תמונה בהירה.
+            <br />
+            מחשבה קדימה.
+          </h2>
+          <p>
+            ההכנסות, החיסכון ופעילות החשבון — כולם יחד במרחב אחד, כדי שתמיד תדעו
+            איפה אתם עומדים.
+          </p>
+          <div className="login-proof">
+            <span className="login-proof-icon">
+              <ShieldCheck size={19} />
+            </span>
+            <span>גישה אישית למשתמשים מורשים בלבד</span>
+          </div>
+        </div>
+        <p className="relative text-[11px] text-hero-foreground/40">
+          MYINCOME · FAMILY FINANCE
+        </p>
+      </aside>
+      <section className="login-form">
+        <div className="w-full max-w-sm">
+          <div className="mb-10 flex items-center gap-3 md:hidden">
+            <span className="brand-symbol">
+              <WalletCards size={20} />
+            </span>
+            <span dir="ltr" className="brand-name">
+              MyIncome.
+            </span>
+          </div>
+          <p className="page-eyebrow">WELCOME TO MYINCOME</p>
           <h1 className="ui-page-title">
-            {mode === "login" ? "ברוכים הבאים" : "יצירת חשבון"}
+            {mode === "login" ? "טוב לראות אתכם" : "נעים להכיר"}
           </h1>
-          <p className="ui-page-description mb-7">
-            הכניסה זמינה לכתובות מייל שאושרו על ידי מנהל האתר.
+          <p className="ui-page-description mb-8">
+            {mode === "login"
+              ? "התחברו כדי לראות את התמונה הכלכלית שלכם."
+              : "יוצרים חשבון עם כתובת מייל שאושרה על ידי מנהל האתר."}
           </p>
           {error && (
-            <div className="ui-alert mb-5" role="alert">
-              {error}
-            </div>
+            <Alert variant="destructive" className="mb-5">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           {successMsg ? (
-            <div className="ui-success" role="status">
-              {successMsg}
-            </div>
+            <Alert role="status">
+              <AlertDescription>{successMsg}</AlertDescription>
+            </Alert>
           ) : (
             <>
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={handleGoogle}
                 disabled={loading}
-                className="ui-btn-secondary w-full"
+                className="w-full"
               >
                 <svg
                   width="18"
@@ -197,80 +205,86 @@ function LoginForm() {
                   />
                 </svg>
                 המשך עם Google
-              </button>
-              <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
-                <span className="h-px flex-1 bg-slate-200" />
-                או באמצעות מייל
-                <span className="h-px flex-1 bg-slate-200" />
+              </Button>
+              <div className="login-divider">
+                <Separator className="flex-1" />
+                <span className="shrink-0">או באמצעות מייל</span>
+                <Separator className="flex-1" />
               </div>
-              <form
-                onSubmit={mode === "login" ? handleLogin : handleSignup}
-                className="space-y-5"
-              >
-                <label className="ui-field">
-                  <span className="ui-label">כתובת מייל</span>
-                  <input
-                    autoComplete="email"
-                    type="email"
-                    required
-                    dir="ltr"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="ui-input"
-                    placeholder="name@example.com"
-                  />
-                </label>
-                {mode === "signup" && (
-                  <label className="ui-field">
-                    <span className="ui-label">שם משתמש</span>
-                    <input
-                      autoComplete="nickname"
+              <form onSubmit={mode === "login" ? handleLogin : handleSignup}>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="login-email">כתובת מייל</FieldLabel>
+                    <Input
+                      id="login-email"
+                      autoComplete="email"
+                      type="email"
                       required
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="ui-input"
+                      dir="ltr"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
                     />
-                  </label>
-                )}
-                <label className="ui-field">
-                  <span className="ui-label">סיסמה</span>
-                  <input
-                    autoComplete={
-                      mode === "login" ? "current-password" : "new-password"
-                    }
-                    type="password"
-                    required
-                    minLength={mode === "signup" ? 6 : undefined}
-                    dir="ltr"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="ui-input"
-                    placeholder={
-                      mode === "signup" ? "לפחות 6 תווים" : undefined
-                    }
-                  />
-                </label>
-                <button disabled={loading} className="ui-btn-primary w-full">
-                  {loading
-                    ? "ממשיך…"
-                    : mode === "login"
-                      ? "כניסה לחשבון"
-                      : "יצירת חשבון"}
-                </button>
+                  </Field>
+                  {mode === "signup" && (
+                    <Field>
+                      <FieldLabel htmlFor="login-name">שם משתמש</FieldLabel>
+                      <Input
+                        id="login-name"
+                        autoComplete="nickname"
+                        required
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                      />
+                    </Field>
+                  )}
+                  <Field>
+                    <FieldLabel htmlFor="login-password">סיסמה</FieldLabel>
+                    <Input
+                      id="login-password"
+                      autoComplete={
+                        mode === "login" ? "current-password" : "new-password"
+                      }
+                      type="password"
+                      required
+                      minLength={mode === "signup" ? 6 : undefined}
+                      dir="ltr"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    {mode === "signup" && (
+                      <FieldDescription>לפחות 6 תווים</FieldDescription>
+                    )}
+                  </Field>
+                  <Button type="submit" disabled={loading} className="w-full">
+                    {loading && <Spinner data-icon="inline-start" />}
+                    {loading
+                      ? "ממשיך…"
+                      : mode === "login"
+                        ? "כניסה לחשבון"
+                        : "יצירת חשבון"}
+                  </Button>
+                </FieldGroup>
               </form>
-              <p className="mt-6 text-center text-sm text-slate-500">
-                {mode === "login" ? "אין לך חשבון?" : "כבר יש לך חשבון?"}{" "}
-                <button
-                  disabled={loading}
+              <div className="mt-6 flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                <span>
+                  {mode === "login" ? "אין לכם חשבון?" : "כבר יש לכם חשבון?"}
+                </span>
+                <Button
                   type="button"
+                  variant="link"
+                  size="sm"
+                  disabled={loading}
                   onClick={() => {
                     setMode(mode === "login" ? "signup" : "login");
                     setError(null);
                   }}
-                  className="rounded text-indigo-700 underline underline-offset-4"
                 >
                   {mode === "login" ? "יצירת חשבון" : "כניסה לחשבון"}
-                </button>
+                </Button>
+              </div>
+              <p className="mt-8 text-center text-[11px] leading-6 text-muted-foreground">
+                הכניסה זמינה לכתובות מייל שאושרו על ידי מנהל האתר.
               </p>
             </>
           )}
@@ -279,22 +293,17 @@ function LoginForm() {
     </main>
   );
 }
-
 export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-          <div className="w-full max-w-md p-8">
-            <div className="bg-white p-8 rounded-3xl shadow-md border border-slate-100">
-              <div className="animate-pulse space-y-4">
-                <div className="h-8 bg-slate-200 rounded w-3/4 mx-auto"></div>
-                <div className="h-12 bg-slate-100 rounded"></div>
-                <div className="h-12 bg-slate-100 rounded"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <main
+          id="main-content"
+          className="flex min-h-screen items-center justify-center"
+        >
+          <Spinner />
+          <span className="sr-only">טוען…</span>
+        </main>
       }
     >
       <LoginForm />

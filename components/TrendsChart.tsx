@@ -1,25 +1,47 @@
 "use client";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { BarChart3 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
-import { BarChart3 } from "lucide-react";
-import { Transaction, IncomeType } from "../types";
 import { CATEGORIES } from "../constants";
 import { incomeDateParts } from "../lib/income-date";
-
+import { IncomeType, Transaction } from "../types";
 interface TrendsChartProps {
   transactions: Transaction[];
   currentDate: Date;
 }
-
 type View = "months" | "years";
 interface ChartPoint {
   name: string;
@@ -30,7 +52,6 @@ interface ChartPoint {
   total: number;
   count: number;
 }
-
 const currency = new Intl.NumberFormat("he-IL", {
   style: "currency",
   currency: "ILS",
@@ -38,7 +59,6 @@ const currency = new Intl.NumberFormat("he-IL", {
 });
 const monthName = new Intl.DateTimeFormat("he-IL", { month: "short" });
 const categories = [IncomeType.BANK, IncomeType.BIT, IncomeType.CASH];
-
 function buildChartData(
   transactions: Transaction[],
   year: number,
@@ -67,7 +87,6 @@ function buildChartData(
       count: 0,
     }),
   );
-
   transactions.forEach((transaction) => {
     // Read the calendar date directly so timezone offsets cannot move it to another month.
     const [transactionYear, month] = transaction.date
@@ -95,14 +114,19 @@ function buildChartData(
   });
   return data;
 }
-
 function calculateAverages(
   transactions: Transaction[],
   currentMonth: number,
   firstYear: number,
   lastYear: number,
 ) {
-  const months = new Map<string, { year: number; total: number }>();
+  const months = new Map<
+    string,
+    {
+      year: number;
+      total: number;
+    }
+  >();
   transactions.forEach((transaction) => {
     const [year, month] = transaction.date.slice(0, 10).split("-").map(Number);
     if (
@@ -121,7 +145,6 @@ function calculateAverages(
     entry.total = Math.round((entry.total + transaction.amount) * 100) / 100;
     months.set(key, entry);
   });
-
   const eligibleMonths = Array.from(months.values()).filter(
     (month) => month.total !== 0,
   );
@@ -134,46 +157,45 @@ function calculateAverages(
     yearly: yearCount ? total / yearCount : null,
   };
 }
-
 interface TooltipProps {
   active?: boolean;
-  payload?: { payload: ChartPoint }[];
+  payload?: {
+    payload: ChartPoint;
+  }[];
 }
-
 function IncomeTooltip({ active, payload }: TooltipProps) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
     <div
       dir="rtl"
-      className="rounded-2xl border border-slate-100 bg-white p-4 text-right shadow-xl"
+      className="rounded-2xl border border-border bg-popover p-4 text-right shadow-xl"
     >
-      <p className="mb-3 font-bold text-slate-800">{point.fullDate}</p>
+      <p className="mb-3 font-bold text-foreground">{point.fullDate}</p>
       {categories.map((type) => (
         <div
           key={type}
           className="mb-2 flex items-center justify-between gap-6 text-sm"
         >
-          <span className="flex items-center gap-2 text-slate-600">
+          <span className="flex items-center gap-2 text-muted-foreground">
             <span
               className="h-2 w-2 rounded-full"
               style={{ backgroundColor: CATEGORIES[type].color }}
             />
             {CATEGORIES[type].label}
           </span>
-          <span className="tabular-nums text-slate-800">
+          <span className="tabular-nums text-foreground">
             {currency.format(point[type])}
           </span>
         </div>
       ))}
-      <div className="mt-3 flex justify-between gap-6 border-t border-slate-100 pt-2 font-bold text-slate-900">
+      <div className="mt-3 flex justify-between gap-6 border-t border-border pt-2 font-bold text-foreground">
         <span>סה״כ</span>
         <span className="tabular-nums">{currency.format(point.total)}</span>
       </div>
     </div>
   );
 }
-
 export const TrendsChart: React.FC<TrendsChartProps> = ({
   transactions,
   currentDate,
@@ -181,7 +203,6 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
   const [view, setView] = useState<View>("months");
   const [chosenYear, setChosenYear] = useState<number | null>(null);
   const selectedYear = chosenYear ?? currentDate.getFullYear();
-
   const years = useMemo(() => {
     const transactionYears = transactions
       .map((transaction) => Number(transaction.date.slice(0, 4)))
@@ -199,7 +220,6 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
       (_, index) => lastYear - index,
     );
   }, [transactions, currentDate, selectedYear]);
-
   const firstYear = years[years.length - 1];
   const data = useMemo(
     () => buildChartData(transactions, selectedYear, view, firstYear),
@@ -227,12 +247,10 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
     view === "months"
       ? String(selectedYear)
       : data[0].name + "–" + selectedYear;
-
   const allYears = useMemo(() => {
     return calculateAverages(transactions, currentMonth, -Infinity, Infinity);
   }, [transactions, currentMonth]);
   const annualAverages = view === "months" ? allYears : periodAverages;
-
   const summaries = [
     {
       label: view === "months" ? "סה״כ הכנסות בשנה" : "סה״כ הכנסות בתקופה",
@@ -254,182 +272,186 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
         "לפי " + annualAverages.yearCount + " שנים עם חודשים שנכללו בחישוב",
     },
   ];
-
   return (
-    <section dir="rtl" aria-label="מגמת הכנסות" className="ui-panel mb-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-5">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600">
-            <BarChart3 size={24} aria-hidden="true" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-800">מגמת הכנסות</h3>
-            <p className="text-sm text-slate-500">
-              {view === "months" ? "הכנסות לפי חודשים" : "הכנסות לפי שנים"}
-            </p>
-          </div>
-        </div>
-        <div className="flex w-full flex-wrap items-end gap-3 sm:w-auto">
-          <div role="group" aria-label="אופן הצגת הגרף" className="ui-tabs">
-            {(["months", "years"] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={view === option}
-                onClick={() => setView(option)}
-              >
-                {option === "months" ? "לפי חודשים" : "לפי שנים"}
-              </button>
-            ))}
-          </div>
-          <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-slate-500 sm:flex-none">
-            {view === "months" ? "שנה להצגה" : "הצגת שנים עד"}
-            <select
-              value={selectedYear}
-              onChange={(event) => setChosenYear(Number(event.target.value))}
-              className="ui-input"
+    <Card>
+      <CardHeader className="trend-header">
+        <CardTitle>מגמת הכנסות</CardTitle>
+        <CardDescription>הסיפור שמאחורי המספרים, לאורך הזמן</CardDescription>
+        <CardAction>
+          <div className="flex flex-wrap items-center gap-3">
+            <ToggleGroup
+              value={[view]}
+              onValueChange={(values) => {
+                if (values.length) setView(values[0] as View);
+              }}
+              aria-label="אופן הצגת הגרף"
+              variant="outline"
             >
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div
-        aria-live="polite"
-        className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3"
-      >
-        {summaries.map((summary) => (
-          <div
-            key={summary.label}
-            className="rounded-xl border border-slate-100 bg-slate-50/70 p-4"
-          >
-            <p className="text-sm text-slate-600">{summary.label}</p>
-            <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">
-              {summary.value === null ? "—" : currency.format(summary.value)}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">{summary.detail}</p>
-          </div>
-        ))}
-      </div>
-      <p className="mb-5 text-xs leading-relaxed text-slate-500">
-        הממוצעים מבוססים על חודשים שהסתיימו וסכומם שונה מאפס. הממוצע השנתי הוא
-        סכום החודשים האלה חלקי מספר השנים שבהן נכללו חודשים. כשאין חודשים
-        מתאימים, מוצג —.
-      </p>
-
-      {hasTransactions ? (
-        <>
-          {average !== null && (
-            <p className="mb-2 flex items-center gap-2 text-xs text-indigo-700">
-              <span
-                aria-hidden="true"
-                className="w-5 border-t-2 border-dashed border-indigo-500"
-              />
-              {view === "months" ? "ממוצע חודשי" : "ממוצע שנתי"} ·{" "}
-              {currency.format(average)}
-            </p>
-          )}
-          <div
-            className="overflow-x-auto"
-            tabIndex={0}
-            role="region"
-            aria-label={"גרף הכנסות " + periodLabel}
-          >
-            <div dir="ltr" className="h-[300px] min-w-[560px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data}
-                  accessibilityLayer
-                  margin={{ top: 12, right: 12, left: 0, bottom: 10 }}
-                  maxBarSize={36}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    interval={0}
-                    tick={{ fill: "#64748b", fontSize: 11 }}
-                    dy={8}
-                  />
-                  <YAxis
-                    width={64}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#64748b", fontSize: 11 }}
-                    tickFormatter={(value) =>
-                      new Intl.NumberFormat("he-IL", {
-                        notation: "compact",
-                        maximumFractionDigits: 1,
-                      }).format(value) + " ₪"
-                    }
-                  />
-                  <Tooltip
-                    content={<IncomeTooltip />}
-                    cursor={{ fill: "#f8fafc" }}
-                  />
-                  {average !== null && (
-                    <ReferenceLine
-                      y={average}
-                      stroke="#6366f1"
-                      strokeDasharray="5 5"
-                    />
-                  )}
-                  {categories.map((type) => (
-                    <Bar
-                      key={type}
-                      dataKey={type}
-                      name={CATEGORIES[type].label}
-                      stackId="income"
-                      fill={CATEGORIES[type].color}
-                      isAnimationActive={false}
-                    />
+              <ToggleGroupItem value="months">לפי חודשים</ToggleGroupItem>
+              <ToggleGroupItem value="years">לפי שנים</ToggleGroupItem>
+            </ToggleGroup>
+            <Select
+              items={years.map((year) => ({
+                value: year,
+                label: String(year),
+              }))}
+              value={selectedYear}
+              onValueChange={(value) => {
+                if (value !== null) setChosenYear(Number(value));
+              }}
+            >
+              <SelectTrigger
+                aria-label={view === "months" ? "שנה להצגה" : "הצגת שנים עד"}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                <SelectGroup>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
                   ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
-          <p className="mt-1 text-center text-xs text-slate-400 sm:hidden">
-            אפשר לגלול את הגרף לצדדים לצפייה בכל העמודות
-          </p>
-        </>
-      ) : (
-        <div className="flex h-48 flex-col items-center justify-center gap-2 rounded-2xl bg-slate-50 text-center">
-          <BarChart3 className="text-slate-300" size={32} aria-hidden="true" />
-          <p className="font-medium text-slate-600">
-            אין הכנסות רשומות בתקופה שנבחרה
-          </p>
-          <p className="text-sm text-slate-500">
-            אפשר לבחור שנה אחרת או להוסיף הכנסה
-          </p>
-        </div>
-      )}
-      <div
-        className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2"
-        aria-label="קטגוריות הכנסה"
-      >
-        {categories.map((type) => (
-          <span
-            key={type}
-            className="flex items-center gap-2 text-sm text-slate-600"
-          >
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <dl
+          aria-live="polite"
+          className="mb-5 grid gap-4 rounded-xl bg-muted/60 p-5 sm:grid-cols-3"
+        >
+          {summaries.map((summary) => (
+            <div key={summary.label}>
+              <dt className="text-[11px] text-muted-foreground">
+                {summary.label}
+              </dt>
+              <dd className="ui-number mt-2 text-2xl font-medium">
+                {summary.value === null ? "—" : currency.format(summary.value)}
+              </dd>
+              <dd className="mt-2 max-w-48 text-[10px] leading-5 text-muted-foreground">
+                {summary.detail}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mb-5 text-[11px] leading-6 text-muted-foreground">
+          הממוצעים מבוססים על חודשים שהסתיימו וסכומם שונה מאפס. הממוצע השנתי הוא
+          סכום החודשים האלה חלקי מספר השנים שבהן נכללו חודשים.
+        </p>
+        {hasTransactions ? (
+          <>
+            {average !== null && (
+              <p className="mb-2 flex items-center gap-2 text-xs text-primary">
+                <span
+                  aria-hidden="true"
+                  className="w-5 border-t-2 border-dashed border-primary"
+                />
+                {view === "months" ? "ממוצע חודשי" : "ממוצע שנתי"} ·{" "}
+                {currency.format(average)}
+              </p>
+            )}
+            <div
+              className="chart-scroll"
+              tabIndex={0}
+              role="region"
+              aria-label={"גרף הכנסות " + periodLabel}
+            >
+              <div dir="ltr" className="h-[300px] min-w-[560px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={data}
+                    accessibilityLayer
+                    margin={{ top: 12, right: 12, left: 0, bottom: 10 }}
+                    maxBarSize={36}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="var(--border)"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      interval={0}
+                      tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                      dy={8}
+                    />
+                    <YAxis
+                      width={64}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                      tickFormatter={(value) =>
+                        new Intl.NumberFormat("he-IL", {
+                          notation: "compact",
+                          maximumFractionDigits: 1,
+                        }).format(value) + " ₪"
+                      }
+                    />
+                    <Tooltip
+                      content={<IncomeTooltip />}
+                      cursor={{ fill: "var(--muted)" }}
+                    />
+                    {average !== null && (
+                      <ReferenceLine
+                        y={average}
+                        stroke="var(--primary)"
+                        strokeDasharray="5 5"
+                      />
+                    )}
+                    {categories.map((type) => (
+                      <Bar
+                        key={type}
+                        dataKey={type}
+                        name={CATEGORIES[type].label}
+                        stackId="income"
+                        fill={CATEGORIES[type].color}
+                        isAnimationActive={false}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <p className="mt-1 text-center text-xs text-muted-foreground sm:hidden">
+              אפשר לגלול את הגרף לצדדים לצפייה בכל העמודות
+            </p>
+          </>
+        ) : (
+          <Empty className="min-h-48">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <BarChart3 />
+              </EmptyMedia>
+              <EmptyTitle>אין הכנסות בתקופה שנבחרה</EmptyTitle>
+              <EmptyDescription>
+                אפשר לבחור שנה אחרת או להוסיף הכנסה.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+        <div
+          className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2"
+          aria-label="קטגוריות הכנסה"
+        >
+          {categories.map((type) => (
             <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: CATEGORIES[type].color }}
-            />
-            {CATEGORIES[type].label}
-          </span>
-        ))}
-      </div>
-    </section>
+              key={type}
+              className="flex items-center gap-2 text-[11px] text-muted-foreground"
+            >
+              <span
+                className="size-1.5 rounded-full"
+                style={{ backgroundColor: CATEGORIES[type].color }}
+              />
+              {CATEGORIES[type].label}
+            </span>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };

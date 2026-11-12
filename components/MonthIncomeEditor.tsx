@@ -1,8 +1,13 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 import { useEffect, useState } from "react";
-import { AppDialog } from "./AppDialog";
 import { useAuth } from "../lib/useAuth";
-
+import { AppDialog } from "./AppDialog";
 export function MonthIncomeEditor({
   person,
   month,
@@ -43,7 +48,6 @@ export function MonthIncomeEditor({
       active = false;
     };
   }, [person, month, fetchWithAuth]);
-
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -72,68 +76,73 @@ export function MonthIncomeEditor({
   }
   return (
     <AppDialog
-      title={`עריכת סכומי חודש · ${month.slice(0, 7)}`}
-      description="הסכומים שתגדיר מחליפים את הסיכום החודשי. רישומי המקור נשמרים, וייבוא דוחות נוסף ישמור את הסכום הידני."
+      title={`עריכת חודש · ${month.slice(0, 7)}`}
+      description="עדכון הסכומים החודשיים בכל קטגוריה. רישומי המקור נשמרים, וגם ייבוא נוסף ישמור את הסכום שקבעתם."
       onClose={onClose}
       busy={saving}
     >
       {loading ? (
-        <p role="status">טוען את החודש…</p>
+        <div role="status" className="flex items-center gap-2 py-8">
+          <Spinner />
+          טוען את החודש…
+        </div>
       ) : (
-        <form onSubmit={save} className="space-y-4">
-          {(["cash", "bit", "bank"] as const).map((category) => (
-            <label key={category} className="block text-sm font-medium">
-              {{ cash: "מזומן", bit: "Bit", bank: "העברה בנקאית" }[category]}
-              <input
-                required
-                type="number"
-                step="0.01"
-                min="0"
-                max="1000000000000"
-                value={amounts[category]}
-                onChange={(event) =>
-                  setAmounts((current) => ({
-                    ...current,
-                    [category]: event.target.value,
-                  }))
+        <form onSubmit={save}>
+          <FieldGroup>
+            {(["cash", "bit", "bank"] as const).map((category) => (
+              <Field key={category}>
+                <FieldLabel htmlFor={`month-${category}`}>
+                  {
+                    { cash: "מזומן", bit: "Bit", bank: "העברה בנקאית" }[
+                      category
+                    ]
+                  }
+                </FieldLabel>
+                <Input
+                  id={`month-${category}`}
+                  required
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  max="1000000000000"
+                  value={amounts[category]}
+                  onChange={(event) =>
+                    setAmounts((current) => ({
+                      ...current,
+                      [category]: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+            ))}
+            <Separator />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={saving}
+              >
+                ביטול
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  saving || !amounts.cash || !amounts.bit || !amounts.bank
                 }
-                className="ui-input mt-2"
-              />
-            </label>
-          ))}
-          <div className="flex gap-3">
-            <button
-              disabled={
-                saving || !amounts.cash || !amounts.bit || !amounts.bank
-              }
-              className="ui-btn-primary"
-            >
-              {saving ? "שומר…" : "שמירת החודש"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="ui-btn-secondary"
-            >
-              סגירה
-            </button>
-          </div>
+              >
+                {saving && <Spinner data-icon="inline-start" />}
+                {saving ? "שומר…" : "שמירת החודש"}
+              </Button>
+            </div>
+          </FieldGroup>
         </form>
       )}
       {error && (
-        <p role="alert" className="mt-3 text-sm text-rose-700">
-          {error}
-        </p>
-      )}
-      {loading && (
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-4 rounded-xl bg-slate-100 px-4 py-2"
-        >
-          סגירה
-        </button>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
     </AppDialog>
   );

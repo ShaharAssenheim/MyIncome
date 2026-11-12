@@ -1,5 +1,5 @@
 "use client";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 const currency = new Intl.NumberFormat("he-IL", {
   style: "currency",
   currency: "ILS",
@@ -29,7 +29,7 @@ export function SummaryPie({
             <Cell
               key={entry.name}
               fill={entry.color}
-              className="stroke-slate-900 stroke-[3px]"
+              className="stroke-hero stroke-[3px]"
             />
           ))}
         </Pie>
@@ -38,7 +38,7 @@ export function SummaryPie({
           contentStyle={{
             borderRadius: "16px",
             border: "1px solid #e2e8f0",
-            color: "#0f172a",
+            color: "var(--foreground)",
           }}
         />
       </PieChart>

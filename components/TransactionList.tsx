@@ -1,8 +1,37 @@
 "use client";
+import { CalendarDays, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Transaction } from "../types";
 import { CATEGORIES, getCategoryIcon } from "../constants";
-import { Trash2, Check, X, CalendarDays } from "lucide-react";
+import { Transaction } from "../types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "./ui/empty";
+import { Spinner } from "./ui/spinner";
+
 export function TransactionList({
   transactions,
   onDelete,
@@ -19,99 +48,122 @@ export function TransactionList({
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
   return (
-    <section className="ui-panel">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">תנועות החודש</h2>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-          {sorted.length} תנועות
-        </span>
-      </div>
-      {!sorted.length ? (
-        <div className="ui-empty" role="status">
-          <CalendarDays size={26} className="mx-auto mb-3 text-slate-400" />
-          {isLoading ? "טוען נתונים…" : "לא נוספו תנועות החודש"}
-        </div>
-      ) : (
-        <ul>
-          {sorted.map((t) => (
-            <li key={t.id} className="ui-entry">
-              <div
-                className={`shrink-0 rounded-xl p-3 ${CATEGORIES[t.type].iconColor} ${CATEGORIES[t.type].bgStart}`}
-                aria-hidden="true"
-              >
-                {getCategoryIcon(t.type, 19)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="ui-number font-semibold text-slate-900">
-                  {new Intl.NumberFormat("he-IL", {
-                    style: "currency",
-                    currency: "ILS",
-                    maximumFractionDigits: 2,
-                  }).format(t.amount)}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {CATEGORIES[t.type].label}
-                </p>
-                {t.description && (
-                  <p className="ui-entry-description" title={t.description}>
-                    {t.description}
-                  </p>
-                )}
-              </div>
-              <div className="ui-entry-actions">
-                <time
-                  className="text-xs text-slate-500"
-                  dateTime={t.paymentDate ?? t.date}
-                  title={t.paymentDate ? "תאריך קבלת המשכורת בבנק" : undefined}
+    <Card>
+      <CardHeader>
+        <CardTitle>תנועות החודש</CardTitle>
+        <CardDescription>פירוט ההכנסות בחודש שבחרתם</CardDescription>
+        <CardAction>
+          <Badge variant="secondary">{sorted.length} תנועות</Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        {!sorted.length ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                {isLoading ? <Spinner /> : <CalendarDays />}
+              </EmptyMedia>
+              <EmptyTitle>
+                {isLoading ? "טוען נתונים…" : "החודש הזה עדיין פנוי"}
+              </EmptyTitle>
+              <EmptyDescription>
+                {isLoading
+                  ? "הנתונים יופיעו כאן בעוד רגע."
+                  : "אין הכנסות רשומות בחודש הנבחר. אפשר לבחור חודש אחר."}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <ul>
+            {sorted.map((t) => (
+              <li key={t.id} className="entry-row">
+                <span
+                  className="metric-card-icon shrink-0"
+                  style={{
+                    color: CATEGORIES[t.type].color,
+                    background: `color-mix(in srgb,${CATEGORIES[t.type].color} 8%,transparent)`,
+                  }}
+                  aria-hidden="true"
                 >
-                  {t.paymentDate && "התקבל ב־"}
-                  {new Date(t.paymentDate ?? t.date).toLocaleDateString(
-                    "he-IL",
-                    {
-                      day: "2-digit",
-                      month: "2-digit",
-                      ...(t.paymentDate ? { year: "numeric" as const } : {}),
-                      timeZone: "Asia/Jerusalem",
-                    },
+                  {getCategoryIcon(t.type, 17)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="ui-number text-base font-medium">
+                    {new Intl.NumberFormat("he-IL", {
+                      style: "currency",
+                      currency: "ILS",
+                      maximumFractionDigits: 2,
+                    }).format(t.amount)}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {CATEGORIES[t.type].label}
+                  </p>
+                  {t.description && (
+                    <p className="entry-description">{t.description}</p>
                   )}
-                </time>
-                {canDelete &&
-                  !t.readOnly &&
-                  (confirmId === t.id ? (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-rose-700">למחוק?</span>
-                      <button
-                        className="ui-icon-btn text-rose-700"
-                        aria-label="אישור מחיקה"
-                        onClick={() => {
-                          onDelete(t.id);
-                          setConfirmId(null);
-                        }}
-                      >
-                        <Check size={17} />
-                      </button>
-                      <button
-                        className="ui-icon-btn"
-                        aria-label="ביטול מחיקה"
-                        onClick={() => setConfirmId(null)}
-                      >
-                        <X size={17} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      className="ui-icon-btn text-slate-400"
+                </div>
+                <div className="ms-auto flex items-center gap-3">
+                  <time
+                    className="text-[11px] text-muted-foreground"
+                    dateTime={t.paymentDate ?? t.date}
+                    title={
+                      t.paymentDate ? "תאריך קבלת המשכורת בבנק" : undefined
+                    }
+                  >
+                    {t.paymentDate && "התקבל ב־"}
+                    {new Date(t.paymentDate ?? t.date).toLocaleDateString(
+                      "he-IL",
+                      {
+                        day: "2-digit",
+                        month: "2-digit",
+                        ...(t.paymentDate ? { year: "numeric" as const } : {}),
+                        timeZone: "Asia/Jerusalem",
+                      },
+                    )}
+                  </time>
+                  {canDelete && !t.readOnly && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       aria-label="מחיקת תנועה"
                       onClick={() => setConfirmId(t.id)}
                     >
-                      <Trash2 size={17} />
-                    </button>
-                  ))}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+                      <Trash2 />
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+      <AlertDialog
+        open={confirmId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>למחוק את התנועה?</AlertDialogTitle>
+            <AlertDialogDescription>
+              התנועה תוסר מרשימת ההכנסות והסיכומים החודשיים יתעדכנו בהתאם.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (confirmId) onDelete(confirmId);
+                setConfirmId(null);
+              }}
+            >
+              מחיקת התנועה
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 }
