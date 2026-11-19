@@ -25,11 +25,12 @@ export async function middleware(req: NextRequest) {
   const isAuthApi = pathname.startsWith("/api/auth");
   const isLogin = pathname === "/login";
   const isNextInternal = pathname.startsWith("/_next");
+  const isPwaAsset = pathname === "/manifest.webmanifest" || pathname === "/offline.html";
   const isStaticAsset = /\.(?:png|jpg|jpeg|gif|svg|ico|webp|css|js)$/.test(
     pathname,
   );
 
-  if (isNextInternal || (!pathname.startsWith("/api/") && isStaticAsset))
+  if (isNextInternal || isPwaAsset || (!pathname.startsWith("/api/") && isStaticAsset))
     return NextResponse.next();
   if (isAuthApi) {
     const headers = new Headers(req.headers);

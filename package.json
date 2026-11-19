@@ -23,7 +23,8 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test:income": "node --test tests/income.test.cjs"
+    "test:income": "node --test tests/income.test.cjs",
+    "test:pwa": "node --test tests/pwa.test.cjs"
   },
   "engines": {
     "node": ">=20.0.0",

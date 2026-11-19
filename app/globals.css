@@ -552,3 +552,14 @@
   .login-shell { padding: 24px 16px; }
   .login-form { padding: 28px 22px; }
 }
+
+@media (display-mode: standalone) {
+  .site-header { padding-top: env(safe-area-inset-top); }
+  .login-shell {
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+}
+@media (display-mode: standalone) and (max-width: 760px) {
+  .app-shell { padding-bottom: calc(75px + env(safe-area-inset-bottom)); }
+}

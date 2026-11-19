@@ -29,6 +29,14 @@ npm run dev
 
 Visit **http://localhost:3000** 🎉
 
+### Install as an application (PWA)
+
+Serve the app over HTTPS (or localhost during development). Choose **התקנת האפליקציה** in the account menu or on the login screen. Chrome and Edge show their native install prompt when available; other browsers receive installation instructions. On iPhone/iPad use Share → Add to Home Screen, keeping Open as Web App enabled when shown. On macOS Safari use File → Add to Dock.
+
+Launch **MyIncome from its installed icon** to open it in a standalone window without the browser address bar. Opening the website URL in a browser tab keeps the normal browser UI. Login, both income pages, and the authentication callback are within the application's scope.
+
+The service worker caches only the generic offline screen. Account pages, API responses, and financial records are fetched from the network and are not cached by the service worker. Run `npm run test:pwa` to verify the manifest, icon sizes, public installation resources, authentication gating, and offline behavior.
+
 ---
 
 ## ⚙️ Configuration

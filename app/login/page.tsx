@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
+import { InstallAppButton } from "@/components/PwaProvider";
 import { Home } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -244,6 +245,7 @@ function LoginForm() {
               </div>
             </>
           )}
+          <InstallAppButton className="mt-5 w-full" />
         </div>
       </section>
     </main>

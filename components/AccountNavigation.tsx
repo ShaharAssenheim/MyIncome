@@ -18,6 +18,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { incomeDateParts } from "../lib/income-date";
 import { useAuth } from "../lib/useAuth";
+import { InstallAppMenuItem } from "./PwaProvider";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
@@ -161,6 +162,7 @@ function SignedInNavigation({ pathname }: { pathname: string }) {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
+                <InstallAppMenuItem />
                 {user?.isAdmin && (
                   <DropdownMenuItem onClick={() => setAccessOpen(true)}>
                     <ShieldCheck />
