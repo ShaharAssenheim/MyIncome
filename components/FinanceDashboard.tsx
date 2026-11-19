@@ -40,13 +40,8 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowUpLeft,
   CalendarDays,
-  CircleDollarSign,
-  Landmark,
-  PiggyBank,
   Upload,
-  UserRound,
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
@@ -56,7 +51,10 @@ import { useEffect, useMemo, useState } from "react";
 import { invalidateData, seedData, useDataQuery } from "../lib/client-data";
 import { BankTransaction, FinanceData, money } from "../lib/finance";
 import { incomeDateParts } from "../lib/income-date";
+import { personalSalaryRows } from "../lib/income";
 import { useAuth } from "../lib/useAuth";
+import { useSearchParams } from "next/navigation";
+import { FinanceOverview } from "./FinanceOverview";
 const SavingsChart = dynamic(
   () => import("./FinanceCharts.tsx").then((module) => module.SavingsChart),
   {
@@ -138,6 +136,7 @@ export function FinanceDashboard({
   const { user, fetchWithAuth } = useAuth();
   const query = useDataQuery<FinanceData>("/api/finance", initialData);
   const [year, setYear] = useState("all");
+  const searchParams = useSearchParams();
   const [section, setSection] = useState<Section>("savings");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -146,6 +145,11 @@ export function FinanceDashboard({
   const [showImport, setShowImport] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState("");
+  useEffect(() => {
+    const view = searchParams.get("view");
+    setSection(view && ["savings", "salary", "transactions", "sources"].includes(view) ? view as Section : "savings");
+    setPage(0);
+  }, [searchParams]);
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
@@ -169,16 +173,10 @@ export function FinanceDashboard({
   const data = query.data;
   const statistics = useMemo(() => {
     if (!data) return null;
-    const inYear = (date: string) => year === "all" || date.startsWith(year);
-    const bankYears = data.bankYears.filter(
-      (row) => year === "all" || row.year === Number(year),
-    );
     const months = (data.savings?.monthly ?? []).filter(
       (row) => year === "all" || row.year === Number(year),
     );
-    const salary = data.income.shahar.filter(
-      (row) => inYear(row.date) && row.type === "bank",
-    );
+    const salary = personalSalaryRows(data.income.shahar, "shahar", year);
     const monthly = new Map<string, number>();
     salary.forEach((row) =>
       monthly.set(
@@ -210,10 +208,6 @@ export function FinanceDashboard({
     return {
       months,
       latest: months.at(-1),
-      latestBank: bankYears.at(-1),
-      kristinTotal: data.income.kristin
-        .filter((row) => inYear(row.date))
-        .reduce((sum, row) => sum + Number(row.amount), 0),
       salaryTotal: salary.reduce((sum, row) => sum + Number(row.amount), 0),
       average: completed.length
         ? completed.reduce((sum, [, value]) => sum + value, 0) /
@@ -227,9 +221,6 @@ export function FinanceDashboard({
         )
         .slice(-12)
         .map(([label, amount]) => ({ label, amount })),
-      credits: bankYears.reduce((sum, row) => sum + Number(row.credits), 0),
-      debits: bankYears.reduce((sum, row) => sum + Number(row.debits), 0),
-      net: bankYears.reduce((sum, row) => sum + Number(row.net), 0),
     };
   }, [data, year]);
   const years = useMemo(
@@ -290,19 +281,12 @@ export function FinanceDashboard({
   }
   return (
     <main id="main-content" className="min-h-screen pb-16 text-foreground">
-      <div className="ui-page flex flex-col gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-5">
+      <div className="ui-page finance-page flex flex-col gap-5">
+        <div className="dashboard-welcome">
           <div>
-            <p className="page-eyebrow">
-              <span className="size-1.5 rounded-full bg-primary" />
-              FAMILY FINANCE
-            </p>
             <h1 className="ui-page-title">סקירה כללית</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              הכנסות המשפחה, פעילות הבנק והחיסכון
-            </p>
           </div>
-          <div className="flex gap-3">
+          <div className="welcome-actions flex gap-3">
             <Select
               items={[
                 { value: "all", label: "כל השנים" },
@@ -379,81 +363,12 @@ export function FinanceDashboard({
             }}
             className="gap-6"
           >
-            <div className="grid gap-4 min-[360px]:grid-cols-2 lg:grid-cols-4">
-              <Stat
-                icon={WalletCards}
-                title="הכנסות Kristin"
-                value={money(statistics.kristinTotal)}
-              />
-              <Stat
-                icon={Landmark}
-                title="העברות בנקאיות Shahar"
-                value={money(statistics.salaryTotal)}
-                detail="כולל משכורות והתאמות חודשיות"
-              />
-              <Stat
-                icon={CircleDollarSign}
-                title="יתרת עו״ש מדווחת"
-                value={
-                  statistics.latestBank
-                    ? money(statistics.latestBank.balance)
-                    : "—"
-                }
-                detail={statistics.latestBank?.date}
-              />
-              <Stat
-                icon={PiggyBank}
-                title="שווי חיסכון היסטורי"
-                value={statistics.latest ? money(statistics.latest.total) : "—"}
-                detail={
-                  statistics.latest
-                    ? `${statistics.latest.date} · כולל אומדנים לפי המקור`
-                    : undefined
-                }
-              />
-            </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>פעילות חשבון הבנק בתקופה</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Stat
-                    plain
-                    title="זיכויים"
-                    value={money(statistics.credits)}
-                  />
-                  <Stat plain title="חיובים" value={money(statistics.debits)} />
-                  <Stat plain title="תזרים נטו" value={money(statistics.net)} />
-                </div>
-                <p className="mt-4 text-sm text-muted-foreground">
-                  פעילות הבנק כוללת משכורות והעברות בין חשבונות. סכומי ההכנסות
-                  מוצגים בנפרד כדי למנוע ספירה כפולה של העברות Kristin.
-                </p>
-              </CardContent>
-            </Card>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                ["/kristin", "Kristin"],
-                ["/shahar", "Shahar"],
-              ].map(([href, label]) => (
-                <Link key={href} href={href} className="account-shortcut">
-                  <span className="metric-card-icon">
-                    <UserRound size={17} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-sm font-medium">{label}</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      הכנסות חודשיות, קטגוריות ועריכת סכומים
-                    </p>
-                  </div>
-                  <ArrowUpLeft size={17} className="text-muted-foreground" />
-                </Link>
-              ))}
-            </div>
+            <FinanceOverview data={data} statistics={statistics} year={year} />
             <TabsList
+              id="finance-details"
+              aria-label="פירוט הנתונים הכלכליים"
               variant="line"
-              className="h-auto w-full flex-wrap justify-start gap-x-4 gap-y-1 border-b"
+              className="finance-tabs h-auto w-full flex-wrap justify-start gap-x-4 gap-y-1 border-b"
             >
               {(
                 [
@@ -472,49 +387,51 @@ export function FinanceDashboard({
               <TabsContent value="savings" className="flex flex-col gap-6">
                 {
                   <>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>התפתחות החיסכון</CardTitle>
-                        <CardDescription>
-                          הפרשי השווי כוללים שינויי השקעות ואומדנים היסטוריים.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {statistics.months.length ? (
-                          <SavingsChart data={statistics.months} />
-                        ) : (
-                          <Empty>
-                            <EmptyHeader>
-                              <EmptyTitle>אין תמונות מצב בתקופה</EmptyTitle>
-                              <EmptyDescription>
-                                בחרו שנה אחרת כדי לראות את החיסכון לאורך הזמן.
-                              </EmptyDescription>
-                            </EmptyHeader>
-                          </Empty>
-                        )}
-                      </CardContent>
-                    </Card>
-                    {data.savings && (
+                    <div className="savings-detail-grid">
                       <Card>
                         <CardHeader>
-                          <CardTitle>
-                            תיק השקעות · {data.savings.portfolioAsOf}
-                          </CardTitle>
+                          <CardTitle>התפתחות החיסכון</CardTitle>
+                          <CardDescription>
+                            הפרשי השווי כוללים שינויי השקעות ואומדנים היסטוריים.
+                          </CardDescription>
                         </CardHeader>
                         <CardContent>
-                          <div className="grid gap-4 sm:grid-cols-3">
-                            {data.savings.holdings.map((item) => (
-                              <Stat
-                                plain
-                                key={item.name}
-                                title={item.name}
-                                value={money(item.value)}
-                              />
-                            ))}
-                          </div>
+                          {statistics.months.length ? (
+                            <SavingsChart data={statistics.months} />
+                          ) : (
+                            <Empty>
+                              <EmptyHeader>
+                                <EmptyTitle>אין תמונות מצב בתקופה</EmptyTitle>
+                                <EmptyDescription>
+                                  בחרו שנה אחרת כדי לראות את החיסכון לאורך הזמן.
+                                </EmptyDescription>
+                              </EmptyHeader>
+                            </Empty>
+                          )}
                         </CardContent>
                       </Card>
-                    )}
+                      {data.savings && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>
+                              תיק השקעות · {data.savings.portfolioAsOf}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="portfolio-positions">
+                              {data.savings.holdings.map((item) => (
+                                <Stat
+                                  plain
+                                  key={item.name}
+                                  title={item.name}
+                                  value={money(item.value)}
+                                />
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                      </div>
                     <Card>
                       <CardHeader>
                         <CardTitle>יתרות חודשיות</CardTitle>
@@ -659,7 +576,7 @@ export function FinanceDashboard({
                   <>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Stat
-                        title="העברות בנקאיות ומשכורות"
+                        title="משכורות שחר"
                         value={money(statistics.salaryTotal)}
                       />
                       <Stat
@@ -688,7 +605,7 @@ export function FinanceDashboard({
                       href="/shahar"
                       className="inline-block text-sm font-semibold text-primary underline"
                     >
-                      פירוט המשכורות, המעסיקים ועריכת חודש בעמוד Shahar
+                      פירוט המשכורות, המעסיקים ועריכת חודש בעמוד שחר
                     </Link>
                   </>
                 }

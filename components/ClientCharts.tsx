@@ -13,6 +13,7 @@ export const DynamicTrendsChart = dynamic(
     return mod.TrendsChart as ComponentType<{
       transactions: Transaction[];
       currentDate: Date;
+      onYearChange: (year: number) => void;
     }>;
   },
   {

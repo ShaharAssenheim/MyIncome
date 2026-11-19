@@ -54,6 +54,86 @@ export function salaryToIncome(row: SalaryRow): IncomeRow {
   };
 }
 
+// Start from Shahar's dedicated payroll records, not general bank transfers.
+// An explicitly edited bank month replaces that month's payroll total, including
+// an edit to zero. Kristin's income comes from her personal income ledger.
+export function personalSalaryRows(
+  rows: IncomeRow[],
+  person: "shahar" | "kristin",
+  year = "all",
+) {
+  const selected = rows.filter(
+    (row) => year === "all" || row.date.startsWith(`${year}-`),
+  );
+  if (person === "kristin") return selected;
+
+  const overrides = new Map<string, IncomeRow>();
+  const bankTotals = new Map<string, number>();
+  for (const row of selected) {
+    if (row.type.toLowerCase() !== "bank") continue;
+    const period = row.date.slice(0, 7);
+    bankTotals.set(
+      period,
+      (bankTotals.get(period) ?? 0) + Math.round(Number(row.amount) * 100),
+    );
+    if (row.month_override) overrides.set(period, row);
+  }
+
+  return [
+    ...selected.filter(
+      (row) => row.id.startsWith("salary-") && !overrides.has(row.date.slice(0, 7)),
+    ),
+    ...[...overrides].map(([period, row]) => ({
+      ...row,
+      // The ledger adjustment is a difference, so use the final edited total.
+      amount: bankTotals.get(period)! / 100,
+    })),
+  ];
+}
+
+export function personalSalarySummary(
+  income: { kristin: IncomeRow[]; shahar: IncomeRow[] },
+  year = "all",
+) {
+  const totals = { kristin: 0, shahar: 0 };
+  const ranges: Record<
+    "kristin" | "shahar",
+    { from: string; to: string } | null
+  > = { kristin: null, shahar: null };
+  const months = new Map<
+    string,
+    { period: string; kristin: number; shahar: number }
+  >();
+  for (const person of ["kristin", "shahar"] as const) {
+    for (const row of personalSalaryRows(income[person], person, year)) {
+      const cents = Math.round(Number(row.amount) * 100);
+      totals[person] += cents;
+      const period = row.date.slice(0, 7);
+      const month = months.get(period) ?? { period, kristin: 0, shahar: 0 };
+      month[person] += cents;
+      months.set(period, month);
+    }
+  }
+  const monthly = [...months.values()]
+    .sort((a, b) => a.period.localeCompare(b.period))
+    .filter((month) => month.kristin !== 0 || month.shahar !== 0);
+  for (const person of ["kristin", "shahar"] as const) {
+    const populated = monthly.filter((month) => month[person] !== 0);
+    ranges[person] = populated.length
+      ? { from: populated[0].period, to: populated[populated.length - 1].period }
+      : null;
+  }
+  return {
+    totals: { kristin: totals.kristin / 100, shahar: totals.shahar / 100 },
+    ranges,
+    months: monthly.map((month) => ({
+      period: month.period,
+      kristin: month.kristin / 100,
+      shahar: month.shahar / 100,
+    })),
+  };
+}
+
 export function applyMonthlyOverrides(
   rows: IncomeRow[],
   overrides: MonthOverride[],

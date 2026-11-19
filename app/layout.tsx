@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "MyIncome · הכנסות המשפחה",
-  description: "הכנסות, חיסכון ומצב החשבון המשפחתי במקום אחד",
+  description: "ניהול הכנסות, חיסכון וחשבונות בנק",
 };
 export default function RootLayout({
   children,
@@ -21,8 +21,7 @@ export default function RootLayout({
             דילוג לתוכן הראשי
           </a>
           <AuthProvider>
-            <AccountNavigation />
-            {children}
+            <AccountNavigation>{children}</AccountNavigation>
           </AuthProvider>
         </DirectionProvider>
       </body>

@@ -3,7 +3,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -41,6 +40,7 @@ import { IncomeType, Transaction } from "../types";
 interface TrendsChartProps {
   transactions: Transaction[];
   currentDate: Date;
+  onYearChange: (year: number) => void;
 }
 type View = "months" | "years";
 interface ChartPoint {
@@ -199,10 +199,10 @@ function IncomeTooltip({ active, payload }: TooltipProps) {
 export const TrendsChart: React.FC<TrendsChartProps> = ({
   transactions,
   currentDate,
+  onYearChange,
 }) => {
   const [view, setView] = useState<View>("months");
-  const [chosenYear, setChosenYear] = useState<number | null>(null);
-  const selectedYear = chosenYear ?? currentDate.getFullYear();
+  const selectedYear = currentDate.getFullYear();
   const years = useMemo(() => {
     const transactionYears = transactions
       .map((transaction) => Number(transaction.date.slice(0, 4)))
@@ -276,7 +276,6 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
     <Card>
       <CardHeader className="trend-header">
         <CardTitle>מגמת הכנסות</CardTitle>
-        <CardDescription>הסיפור שמאחורי המספרים, לאורך הזמן</CardDescription>
         <CardAction>
           <div className="flex flex-wrap items-center gap-3">
             <ToggleGroup
@@ -297,7 +296,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
               }))}
               value={selectedYear}
               onValueChange={(value) => {
-                if (value !== null) setChosenYear(Number(value));
+                if (value !== null) onYearChange(Number(value));
               }}
             >
               <SelectTrigger

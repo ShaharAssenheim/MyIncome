@@ -1,16 +1,22 @@
 "use client";
 import {
   ChevronDown,
+  ArrowLeftRight,
+  BarChart3,
+  CalendarDays,
+  FolderOpen,
+  Home,
   LayoutDashboard,
   LogOut,
   ShieldCheck,
+  PiggyBank,
   UserRound,
-  WalletCards,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { incomeDateParts } from "../lib/income-date";
 import { useAuth } from "../lib/useAuth";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -25,22 +31,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "./ui/navigation-menu";
 const SiteAccessManagement = dynamic(() =>
   import("./SiteAccessManagement.tsx").then(
     (module) => module.SiteAccessManagement,
   ),
 );
 
-export function AccountNavigation() {
+export function AccountNavigation({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  return pathname === "/login" ? null : (
-    <SignedInNavigation pathname={pathname} />
+  return pathname === "/login" ? children : (
+    <div className="app-shell">
+      <SignedInNavigation pathname={pathname} />
+      <div className="app-content">{children}</div>
+    </div>
   );
 }
 function SignedInNavigation({ pathname }: { pathname: string }) {
@@ -48,6 +51,13 @@ function SignedInNavigation({ pathname }: { pathname: string }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
   const [error, setError] = useState("");
+  const displayName = ({ shahar: "שחר", kristin: "קריסטין" } as Record<string, string>)[
+    user?.username?.toLowerCase() ?? ""
+  ] ?? user?.username;
+  const today = incomeDateParts();
+  const dateLabel = new Intl.DateTimeFormat("he-IL", {
+    day: "numeric", month: "long", year: "numeric",
+  }).format(new Date(today.year, today.month - 1, today.day));
   async function handleLogout() {
     setIsLoggingOut(true);
     setError("");
@@ -61,45 +71,55 @@ function SignedInNavigation({ pathname }: { pathname: string }) {
   }
   const links = [
     { href: "/", label: "סקירה כללית", icon: LayoutDashboard },
-    { href: "/kristin", label: "Kristin", icon: UserRound },
-    { href: "/shahar", label: "Shahar", icon: UserRound },
+    { href: "/kristin", label: "קריסטין", icon: UserRound },
+    { href: "/shahar", label: "שחר", icon: UserRound },
   ];
   return (
     <>
-      <header className="site-header">
-        <div className="site-header-inner">
+      <aside className="site-sidebar" aria-label="ניווט האפליקציה">
           <Link
             href="/"
             className="site-brand"
             aria-label="MyIncome — סקירה כללית"
           >
             <span className="brand-symbol">
-              <WalletCards size={21} aria-hidden="true" />
+              <Home size={27} strokeWidth={2.3} aria-hidden="true" />
             </span>
             <div>
               <span className="brand-name" dir="ltr">
-                MyIncome<span className="text-primary">.</span>
+                MyIncome
               </span>
-              <p className="brand-caption">המרחב הכלכלי המשפחתי</p>
             </div>
           </Link>
-          <NavigationMenu aria-label="ניווט ראשי" className="site-main-nav">
-            <NavigationMenuList>
+          <nav aria-label="ניווט ראשי" className="site-main-nav">
+            <p className="nav-section-label">חשבונות</p>
               {links.map(({ href, label, icon: Icon }) => (
-                <NavigationMenuItem key={href}>
-                  <NavigationMenuLink
-                    render={<Link href={href} />}
+                  <Link key={href} href={href}
                     className="site-nav-link"
                     aria-current={pathname === href ? "page" : undefined}
-                    active={pathname === href}
                   >
-                    <Icon size={16} aria-hidden="true" />
+                    <Icon size={20} aria-hidden="true" />
                     {label}
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
+                  </Link>
               ))}
-            </NavigationMenuList>
-          </NavigationMenu>
+            <div className="nav-divider" />
+            <p className="nav-section-label">נתונים</p>
+            {[
+              { view: "transactions", label: "תנועות בנק", icon: ArrowLeftRight },
+              { view: "savings", label: "חיסכון והשקעות", icon: PiggyBank },
+              { view: "salary", label: "משכורות", icon: BarChart3 },
+              { view: "sources", label: "דוחות ומקורות", icon: FolderOpen },
+            ].map(({ view, label, icon: Icon }) => (
+              <Link key={view} href={`/?view=${view}#finance-details`} className="site-nav-link">
+                <Icon size={20} aria-hidden="true" />{label}
+              </Link>
+            ))}
+          </nav>
+      </aside>
+      <header className="site-header">
+        <div className="site-header-inner">
+          <div className="topbar-location"><LayoutDashboard size={17} aria-hidden="true" /><strong>{links.find((link) => link.href === pathname)?.label ?? "סקירה כללית"}</strong></div>
+          <div className="topbar-date"><CalendarDays size={17} aria-hidden="true" /><span>{dateLabel}</span></div>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -113,13 +133,13 @@ function SignedInNavigation({ pathname }: { pathname: string }) {
             >
               <Avatar className="size-8">
                 <AvatarFallback>
-                  {user?.username?.[0]?.toUpperCase() ?? (
+                  {displayName?.[0]?.toUpperCase() ?? (
                     <UserRound size={16} />
                   )}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden max-w-28 truncate text-start text-xs sm:block">
-                {isLoggingOut ? "מתנתק…" : (user?.username ?? "טוען…")}
+                {isLoggingOut ? "מתנתק…" : (displayName ?? "טוען…")}
               </span>
               <ChevronDown data-icon="inline-end" />
             </DropdownMenuTrigger>
@@ -127,7 +147,7 @@ function SignedInNavigation({ pathname }: { pathname: string }) {
               <DropdownMenuGroup>
                 <DropdownMenuLabel>החשבון שלכם</DropdownMenuLabel>
                 <div className="flex flex-col gap-2 px-2.5 py-3">
-                  <p className="text-sm font-medium">{user?.username}</p>
+                  <p className="text-sm font-medium">{displayName}</p>
                   <p
                     dir="ltr"
                     className="truncate text-start text-xs text-muted-foreground"

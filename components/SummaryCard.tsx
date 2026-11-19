@@ -49,7 +49,7 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ stats }) => {
     >
       <CardHeader>
         <CardTitle>
-          <span className="flex items-center gap-2 text-hero-foreground/70">
+          <span className="flex items-center gap-2 text-hero-foreground/90">
             <TrendingUp size={16} />
             סך ההכנסות החודש
           </span>
@@ -59,7 +59,7 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ stats }) => {
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="hero-total">{formattedTotal}</p>
-            <p className="mt-5 text-xs text-hero-foreground/50">
+            <p className="mt-5 text-xs text-hero-foreground/90">
               מזומן, Bit והעברות בנקאיות
             </p>
           </div>
@@ -70,7 +70,7 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ stats }) => {
             {stats.total > 0 ? (
               <>
                 <SummaryPie data={data} />
-                <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] text-hero-foreground/50">
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] text-hero-foreground/90">
                   התפלגות
                 </span>
               </>
@@ -86,7 +86,7 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ stats }) => {
             {data.map((item) => (
               <li
                 key={item.name}
-                className="flex items-center gap-2 text-[11px] text-hero-foreground/60"
+                className="flex items-center gap-2 text-[11px] text-hero-foreground/90"
               >
                 <span
                   className="size-1.5 rounded-full"

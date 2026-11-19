@@ -1,6 +1,5 @@
 "use client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -11,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
-import { ShieldCheck, WalletCards } from "lucide-react";
+import { Home } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { Suspense, useMemo, useState } from "react";
@@ -113,56 +112,19 @@ function LoginForm() {
   }
   return (
     <main id="main-content" className="login-shell" dir="rtl">
-      <aside className="login-story">
-        <Link href="/" className="site-brand" aria-label="MyIncome">
-          <span className="brand-symbol">
-            <WalletCards size={21} />
-          </span>
-          <span className="brand-name" dir="ltr">
-            MyIncome.
-          </span>
-        </Link>
-        <div className="login-story-content">
-          <Badge variant="hero">המרחב הכלכלי המשפחתי שלכם</Badge>
-          <h2 className="mt-7">
-            תמונה בהירה.
-            <br />
-            מחשבה קדימה.
-          </h2>
-          <p>
-            ההכנסות, החיסכון ופעילות החשבון — כולם יחד במרחב אחד, כדי שתמיד תדעו
-            איפה אתם עומדים.
-          </p>
-          <div className="login-proof">
-            <span className="login-proof-icon">
-              <ShieldCheck size={19} />
-            </span>
-            <span>גישה אישית למשתמשים מורשים בלבד</span>
-          </div>
-        </div>
-        <p className="relative text-[11px] text-hero-foreground/40">
-          MYINCOME · FAMILY FINANCE
-        </p>
-      </aside>
-      <section className="login-form">
+      <section className="login-form" aria-labelledby="login-title">
         <div className="w-full max-w-sm">
-          <div className="mb-10 flex items-center gap-3 md:hidden">
+          <Link href="/" className="site-brand mb-8" aria-label="MyIncome">
             <span className="brand-symbol">
-              <WalletCards size={20} />
+              <Home size={24} />
             </span>
             <span dir="ltr" className="brand-name">
-              MyIncome.
+              MyIncome
             </span>
-          </div>
-          <p className="page-eyebrow">WELCOME TO MYINCOME</p>
-          <h1 className="ui-page-title">
-            {mode === "login" ? "טוב לראות אתכם" : "נעים להכיר"}
+          </Link>
+          <h1 id="login-title" className="ui-page-title mb-7">
+            {mode === "login" ? "כניסה לחשבון" : "יצירת חשבון"}
           </h1>
-          <p className="ui-page-description mb-8">
-            {mode === "login"
-              ? "התחברו כדי לראות את התמונה הכלכלית שלכם."
-              : "יוצרים חשבון עם כתובת מייל שאושרה על ידי מנהל האתר."}
-          </p>
           {error && (
             <Alert variant="destructive" className="mb-5">
               <AlertDescription>{error}</AlertDescription>
@@ -267,9 +229,6 @@ function LoginForm() {
                 </FieldGroup>
               </form>
               <div className="mt-6 flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                <span>
-                  {mode === "login" ? "אין לכם חשבון?" : "כבר יש לכם חשבון?"}
-                </span>
                 <Button
                   type="button"
                   variant="link"
@@ -283,9 +242,6 @@ function LoginForm() {
                   {mode === "login" ? "יצירת חשבון" : "כניסה לחשבון"}
                 </Button>
               </div>
-              <p className="mt-8 text-center text-[11px] leading-6 text-muted-foreground">
-                הכניסה זמינה לכתובות מייל שאושרו על ידי מנהל האתר.
-              </p>
             </>
           )}
         </div>

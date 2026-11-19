@@ -19,13 +19,11 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "./ui/card";
 import {
   Empty,
-  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -51,7 +49,6 @@ export function TransactionList({
     <Card>
       <CardHeader>
         <CardTitle>תנועות החודש</CardTitle>
-        <CardDescription>פירוט ההכנסות בחודש שבחרתם</CardDescription>
         <CardAction>
           <Badge variant="secondary">{sorted.length} תנועות</Badge>
         </CardAction>
@@ -64,13 +61,8 @@ export function TransactionList({
                 {isLoading ? <Spinner /> : <CalendarDays />}
               </EmptyMedia>
               <EmptyTitle>
-                {isLoading ? "טוען נתונים…" : "החודש הזה עדיין פנוי"}
+                {isLoading ? "טוען נתונים…" : "אין הכנסות בחודש הנבחר"}
               </EmptyTitle>
-              <EmptyDescription>
-                {isLoading
-                  ? "הנתונים יופיעו כאן בעוד רגע."
-                  : "אין הכנסות רשומות בחודש הנבחר. אפשר לבחור חודש אחר."}
-              </EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (

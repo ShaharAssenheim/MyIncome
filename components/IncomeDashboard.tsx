@@ -140,28 +140,20 @@ export function IncomeDashboard({
     <main id="main-content">
       <div className="ui-page flex flex-col gap-6">
         <header>
-          <p className="page-eyebrow">
-            <span className="size-1.5 rounded-full bg-primary" />
-            PERSONAL INCOME
-          </p>
           <h1 className="ui-page-title">
-            ההכנסות של {person === "shahar" ? "Shahar" : "Kristin"}
+            הכנסות {person === "shahar" ? "שחר" : "קריסטין"}
           </h1>
-          <p className="ui-page-description">
-            {person === "shahar" ? (
-              <>
-                משכורות מדוחות הבנק משויכות לחודש העבודה שקדם לקבלתן.{" "}
-                <Link
-                  href="/"
-                  className="text-primary underline underline-offset-4"
-                >
-                  ייבוא דוחות בסקירה הכללית
-                </Link>
-              </>
-            ) : (
-              "מבט חודשי על ההכנסות שלכם, בכל קטגוריה ובכל שנה."
-            )}
-          </p>
+          {person === "shahar" && (
+            <p className="ui-page-description">
+              משכורות מדוחות הבנק משויכות לחודש העבודה שקדם לקבלתן.{" "}
+              <Link
+                href="/"
+                className="text-primary underline underline-offset-4"
+              >
+                ייבוא דוחות בסקירה הכללית
+              </Link>
+            </p>
+          )}
         </header>
         {(error || query.error) && (
           <Alert variant="destructive">
@@ -245,6 +237,11 @@ export function IncomeDashboard({
             <DynamicTrendsChart
               transactions={transactions}
               currentDate={currentDate}
+              onYearChange={(year) => {
+                const today = incomeDateParts();
+                const month = year === today.year ? today.month - 1 : 11;
+                setCurrentDate(new Date(year, month, 1));
+              }}
             />
             <TransactionList
               transactions={currentMonthTransactions}
