@@ -19,24 +19,26 @@ const products: RetirementProduct[] = ["pension", "study_fund"];
 
 function AnnualDetails({ data, person, product }: { data: RetirementData; person: RetirementPerson; product: RetirementProduct }) {
   const years = retirementYears(data, person, product);
+  const pension = product === "pension";
   if (!years.length) return null;
   return (
     <details className="rounded-xl border border-border bg-card px-4 sm:px-5">
       <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">{retirementProductNames[product]} · יתרות שנתיות, הפקדות ותשואות</summary>
       <div className="pb-5">
         <p className="mb-4 text-xs leading-6 text-muted-foreground">
-          ההפקדות לפי מועד קליטת הכסף בקרן, גם אם חודש השכר שייך לשנה קודמת. רווחי ההשקעה אחרי הוצאות השקעה ולפני דמי ניהול וביטוח.
-          הצמיחה נטו כוללת גם דמי ניהול, החזרים, ביטוח ואיזון אקטוארי. העברות ותיקוני יתרות מוצגים בנפרד.
-          סיווג רכיבי ההפקדה נשמר מהדוח; תנועות המסומנות ריסק מצבירה אינן בהכרח כסף חדש מהשכר.
+          ההפקדות לפי מועד קליטת הכסף בקרן, גם אם חודש השכר שייך לשנה קודמת. רווחי ההשקעה אחרי הוצאות השקעה ולפני דמי ניהול{pension && " וביטוח"}.
+          {pension ? " הצמיחה נטו כוללת גם דמי ניהול, החזרים, ביטוח ואיזון אקטוארי." : " הרווח נטו כולל ניכוי דמי ניהול ותוספת החזרי דמי ניהול."}
+          {" "}העברות ותיקוני יתרות מוצגים בנפרד.
+          {pension && " סיווג רכיבי ההפקדה נשמר מהדוח; תנועות המסומנות ריסק מצבירה אינן בהכרח כסף חדש מהשכר."}
         </p>
         <Table aria-label={`${retirementProductNames[product]} של ${retirementPersonNames[person]} לפי שנים`}>
           <TableHeader><TableRow>
-            {["שנה", "חברה", "יתרה בסוף התקופה", "הפקדות עובד", "תגמולי מעסיק", "פיצויי מעסיק", "סך הפקדות מדווח", "רווחי השקעה", "צמיחה נטו", "העברות נטו", "תיקון יתרה"].map((title) => <TableHead key={title}>{title}</TableHead>)}
+            {["שנה", "חברה", "יתרה בסוף התקופה", "הפקדות עובד", "תגמולי מעסיק", ...(pension ? ["פיצויי מעסיק"] : []), "סך הפקדות מדווח", "רווחי השקעה", pension ? "צמיחה נטו" : "רווח נטו", "העברות נטו", "תיקון יתרה"].map((title) => <TableHead key={title}>{title}</TableHead>)}
           </TableRow></TableHeader>
           <TableBody>{[...years].reverse().map((row) => <TableRow key={row.year}>
             <TableCell className="font-medium">{row.year}{row.partial && <span className="block text-xs text-muted-foreground">עד {date(row.dates.at(-1)!)}</span>}{row.missingAccounts.length > 0 && <span className="block text-xs text-destructive">מידע חלקי</span>}</TableCell>
             <TableCell>{[...new Set(row.reports.map((report) => data.accounts.find((a) => a.id === report.account_id)!.provider))].join(" + ")}</TableCell>
-            {[row.closing_balance, row.employee_contributions, row.employer_contributions, row.severance_contributions,
+            {[row.closing_balance, row.employee_contributions, row.employer_contributions, ...(pension ? [row.severance_contributions] : []),
               row.contributions_total, row.investment_gains, row.netGrowth, row.transfers_in - row.transfers_out, row.balance_adjustment]
               .map((value, index) => <TableCell key={index} className="tabular-nums"><bdi>{amount(value, row.rounded)}</bdi></TableCell>)}
           </TableRow>)}</TableBody>
@@ -51,7 +53,7 @@ function AnnualDetails({ data, person, product }: { data: RetirementData; person
               {year.reports.map((report) => <div key={report.id} className="mt-3 rounded-lg bg-muted/40 p-3 text-xs leading-6">
                 <p className="font-medium">{data.accounts.find((a) => a.id === report.account_id)!.name} · עד {date(report.period_end)}</p>
                 <p>יתרה: <bdi>{amount(report.closing_balance, year.rounded)}</bdi> · דמי ניהול: <bdi>{amount(report.management_fees, year.rounded)}</bdi> · החזרי דמי ניהול: <bdi>{amount(report.fee_refunds, year.rounded)}</bdi></p>
-                <p>ביטוח נכות: <bdi>{amount(report.disability_cost, year.rounded)}</bdi> · ביטוח שאירים: <bdi>{amount(report.survivor_cost, year.rounded)}</bdi> · איזון אקטוארי: <bdi>{amount(report.actuarial_adjustment, year.rounded)}</bdi></p>
+                {pension && <p>ביטוח נכות: <bdi>{amount(report.disability_cost, year.rounded)}</bdi> · ביטוח שאירים: <bdi>{amount(report.survivor_cost, year.rounded)}</bdi> · איזון אקטוארי: <bdi>{amount(report.actuarial_adjustment, year.rounded)}</bdi></p>}
                 <p>העברות פנימה: <bdi>{amount(report.transfers_in, year.rounded)}</bdi> · החוצה: <bdi>{amount(report.transfers_out, year.rounded)}</bdi></p>
                 <p className="mt-1 text-muted-foreground [overflow-wrap:anywhere]">מקור: {report.source_file} · עמודים {report.source_pages.join(", ")}</p>
                 {report.notes.map((note) => <p key={note} className="mt-1 text-muted-foreground">{note}</p>)}
@@ -92,7 +94,7 @@ export function RetirementSection({ person, initialData }: { person?: Retirement
         {person ? <>
           {products.map((product) => <AnnualDetails key={product} data={query.data!} person={person} product={product} />)}
           {query.data.accounts.filter((a) => a.person === person).some((a) => a.notes.length > 0) && <details className="rounded-xl border border-border bg-card px-4 sm:px-5">
-            <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">מעבר בין חברות ומידע חסר</summary>
+            <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">פרטי הקרנות ומידע חסר</summary>
             <ul className="list-inside list-disc space-y-2 pb-4 text-xs leading-6 text-muted-foreground">{query.data.accounts.filter((a) => a.person === person).map((account) => <li key={account.id}>{account.name}{account.joined_on && ` · הצטרפות ${date(account.joined_on)}`}{account.notes.map((note) => <p className="mt-1" key={note}>{note}</p>)}</li>)}</ul>
           </details>}
         </> : <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs">{(["shahar", "kristin"] as const).map((p) => <Link key={p} href={`/${p}#retirement`} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">לפירוט של {retirementPersonNames[p]}</Link>)}</div>}
