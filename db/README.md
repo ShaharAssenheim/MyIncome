@@ -1,6 +1,6 @@
 # Database
 
-`schema.sql` is the single, complete definition of the current application schema. It contains all 11 public tables, three security-invoker views, indexes, RLS policies, the monthly-edit RPC, and Supabase Auth admission/profile triggers. Supabase provides the `auth` schema and API roles.
+`schema.sql` is the single, complete definition of the current application schema. It contains all 13 public tables, three security-invoker views, indexes, RLS policies, the monthly-edit RPC, and Supabase Auth admission/profile triggers. Supabase provides the `auth` schema and API roles.
 
 | Table | Purpose |
 | --- | --- |
@@ -15,6 +15,8 @@
 | `savings_snapshot_assets` | Nonzero asset balances in each historical snapshot |
 | `finance_events` | Dated financial events |
 | `finance_settings` | Household owner, schema version, snapshot date, notes and sources |
+| `retirement_accounts` | Separate person, provider and product for pension and study funds |
+| `retirement_reports` | Sourced annual/YTD balances, contributions, gains, costs and transfers |
 
 The views are `family_income`, `income_monthly_summary` and `savings_monthly_summary`. They calculate results from these tables without storing duplicate data. Shahar and Kristin remain separate tables.
 
@@ -44,11 +46,16 @@ Their local one-off SQL, legacy bootstrap SQL and deletion/compaction scripts ha
 - A missing `savings_snapshot_assets` row means zero for that asset/month.
 - Cash and investment valuation dates are independent. Do not infer investment value from purchase amounts.
 - Approved viewers can read the family workspace. Only the administrator can mutate it through authenticated access. The monthly-edit RPC is service-role-only.
+- Retirement reports retain source filenames/pages and the precision of reported amounts. A later YTD/annual report replaces earlier reports for that account/year when calculating flows. Transfers, gains and deposits are distinct; closed accounts retain their documented zero balance. Missing data stays unknown.
+- Retirement summaries use each account's latest reported balance and disclose different valuation dates and missing people. They are displayed separately from monthly savings snapshots, whose historical totals do not include these newly supplied records.
+- Financial imports and source PDFs are private. `db/retirement.local.json` is excluded from Git; no personal balances are seeded by `schema.sql`.
 
 ## Verification
 
 `npm run test:db` runs the complete schema on PGlite and verifies fresh installation, data-preserving reapplication, signup/profile triggers, separate income dates, historical rounding, monthly overrides, RLS, admin writes, stale-edit rejection and safe refusal of legacy schemas.
 
-`npm run verify:finance` reads the configured live database using the application's actual data-access functions. Add `-- --backup` to save an exclusive private `db/finance-export-*.local.json` export. Add `-- --baseline <export-path>` to compare every exported financial row against an earlier version-2 export. Neither mode writes to the database.
+`npm run verify:finance` reads the configured live database using the application's actual data-access functions, including retirement statement reconciliation. Add `-- --backup` to save an exclusive private `db/finance-export-*.local.json` export. Add `-- --baseline <export-path>` to compare every exported financial row against an earlier version-2 export. Baselines that predate retirement compare all their original tables; newer baselines also compare the retirement tables. Neither mode writes to the database.
+
+Add `-- --retirement-source db/retirement.local.json` to compare the imported retirement accounts and every statement field with the reviewed private JSON (`accounts` and `reports` arrays). This also verifies provenance, notes and reported precision.
 
 The previous rollout preserved 87 Shahar entries, 82 Kristin entries, 95 cash months, 95 historical snapshots and 75 nonzero historical asset balances. Cash was ILS 37,321.43 as of 2026-11-23 and investments were ILS 1,000,747.32. The access cleanup retained identical checksums in all 11 surviving tables.

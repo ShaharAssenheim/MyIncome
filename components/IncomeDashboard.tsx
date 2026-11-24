@@ -12,6 +12,7 @@ import { CategoryCard } from "../components/CategoryCard";
 import { SummaryCard } from "./SummaryCard";
 import { MonthSelector } from "../components/MonthSelector";
 import { TransactionList } from "../components/TransactionList";
+import { RetirementSection } from "./RetirementSection";
 import { useDataQuery } from "../lib/client-data";
 import { IncomeRow } from "../lib/income";
 import { incomeDateParts } from "../lib/income-date";
@@ -171,6 +172,7 @@ export function IncomeDashboard({
             </p>
           )}
         </header>
+        <a href="#retirement" className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-primary underline underline-offset-4">לפנסיה וקרן ההשתלמות</a>
         {(error || query.error) && (
           <Alert variant="destructive">
             <AlertDescription>{error || query.error}</AlertDescription>
@@ -267,6 +269,7 @@ export function IncomeDashboard({
             />
           </>
         )}
+        <RetirementSection person={person} />
       </div>
       {editingMonth && user?.isAdmin && (
         <MonthIncomeEditor

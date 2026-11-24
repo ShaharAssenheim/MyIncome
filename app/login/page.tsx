@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { Suspense, useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
+import { authCallbackUrl, safeAuthPath } from "../../lib/auth-redirect";
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +26,7 @@ function LoginForm() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextTarget = searchParams.get("next") || "/";
+  const nextTarget = safeAuthPath(searchParams.get("next"));
   // Show the real error from the callback URL (?error=...&detail=...)
   const callbackError = searchParams.get("error");
   const callbackDetail = searchParams.get("detail");
@@ -39,10 +40,6 @@ function LoginForm() {
         : null,
   );
   const supabase = useMemo(() => createClient(), []);
-  function getSafeNextTarget() {
-    if (!nextTarget.startsWith("/") || nextTarget.startsWith("//")) return "/";
-    return nextTarget;
-  }
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -53,7 +50,7 @@ function LoginForm() {
         password,
       });
       if (error) throw error;
-      router.replace(getSafeNextTarget());
+      router.replace(nextTarget);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed");
@@ -73,7 +70,7 @@ function LoginForm() {
       });
       if (error) throw error;
       if (data.session) {
-        router.replace(getSafeNextTarget());
+        router.replace(nextTarget);
         router.refresh();
       } else {
         setSuccessMsg("נשלח מייל לאימות. בדוק את תיבת הדואר שלך.");
@@ -88,17 +85,11 @@ function LoginForm() {
     setError(null);
     setLoading(true);
     try {
-      // NEXT_PUBLIC_SITE_URL should be set in Vercel env vars to the production URL.
-      // Falls back to the current origin for local dev.
-      const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-        window.location.origin;
-      const callbackUrl = new URL("/api/auth/callback", siteUrl);
-      callbackUrl.searchParams.set("next", getSafeNextTarget());
+      const callbackUrl = authCallbackUrl(window.location.origin, nextTarget);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: callbackUrl.toString(),
+          redirectTo: callbackUrl,
           queryParams: {
             access_type: "offline",
             prompt: "consent",

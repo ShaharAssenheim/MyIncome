@@ -9,6 +9,7 @@ import { combinedSalaryTimeline, personalSalarySummary } from "../lib/income";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Skeleton } from "./ui/skeleton";
+import { RetirementSection } from "./RetirementSection";
 
 const CombinedIncomeChart = dynamic(() => import("./FinanceCharts.tsx").then((module) => module.CombinedIncomeChart), {
   ssr: false, loading: () => <Skeleton className="h-56" />,
@@ -47,6 +48,8 @@ export function FinanceOverview({ data, statistics }: {
           <div className="balance-caption"><span className="balance-chip">תמונת מצב</span><span>{statistics.latest ? `${statistics.latest.date} · כולל אומדנים היסטוריים` : "אין נתונים בתקופה שנבחרה"}</span></div>
         </div>
       </section>
+
+      <RetirementSection />
 
       <div className="overview-chart-grid">
         <Card className="overview-chart-card min-w-0">

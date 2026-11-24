@@ -254,6 +254,58 @@ CREATE TABLE IF NOT EXISTS public.finance_settings (
   sources text[] NOT NULL DEFAULT '{}'
 );
 
+CREATE TABLE IF NOT EXISTS public.retirement_accounts (
+  id text PRIMARY KEY CHECK (length(trim(id)) > 0),
+  person text NOT NULL CHECK (person IN ('shahar','kristin')),
+  product text NOT NULL CHECK (product IN ('pension','study_fund')),
+  provider text NOT NULL CHECK (length(trim(provider)) > 0),
+  name text NOT NULL CHECK (length(trim(name)) > 0),
+  fund_type text NOT NULL CHECK (fund_type IN ('comprehensive','supplementary','study_fund')),
+  joined_on date,
+  notes text[] NOT NULL DEFAULT '{}',
+  CHECK ((product = 'study_fund') = (fund_type = 'study_fund'))
+);
+CREATE INDEX IF NOT EXISTS retirement_accounts_person_product_idx ON public.retirement_accounts(person,product);
+
+CREATE TABLE IF NOT EXISTS public.retirement_reports (
+  id text PRIMARY KEY CHECK (length(trim(id)) > 0),
+  account_id text NOT NULL REFERENCES public.retirement_accounts(id),
+  period_start date NOT NULL,
+  period_end date NOT NULL,
+  report_kind text NOT NULL CHECK (report_kind IN ('annual','ytd')),
+  opening_balance numeric(18,2) NOT NULL,
+  closing_balance numeric(18,2) NOT NULL,
+  employee_contributions numeric(18,2) NOT NULL,
+  employer_contributions numeric(18,2) NOT NULL,
+  severance_contributions numeric(18,2) NOT NULL,
+  contributions_total numeric(18,2) NOT NULL,
+  investment_gains numeric(18,2) NOT NULL,
+  transfers_in numeric(18,2) NOT NULL,
+  transfers_out numeric(18,2) NOT NULL,
+  management_fees numeric(18,2) NOT NULL,
+  fee_refunds numeric(18,2) NOT NULL,
+  disability_cost numeric(18,2) NOT NULL,
+  survivor_cost numeric(18,2) NOT NULL,
+  actuarial_adjustment numeric(18,2) NOT NULL,
+  balance_adjustment numeric(18,2) NOT NULL,
+  reported_precision smallint NOT NULL CHECK (reported_precision IN (0,2)),
+  source_file text NOT NULL CHECK (length(trim(source_file)) > 0),
+  source_pages integer[] NOT NULL CHECK (cardinality(source_pages) > 0 AND 0 < ALL(source_pages)),
+  notes text[] NOT NULL DEFAULT '{}',
+  UNIQUE(account_id,period_end),
+  CHECK (extract(month FROM period_start) = 1 AND extract(day FROM period_start) = 1),
+  CHECK (period_end >= period_start AND period_end < period_start + interval '1 year'),
+  CHECK (report_kind <> 'annual' OR (extract(month FROM period_end) = 12 AND extract(day FROM period_end) = 31)),
+  CHECK (opening_balance >= 0 AND closing_balance >= 0 AND employee_contributions >= 0
+    AND employer_contributions >= 0 AND severance_contributions >= 0 AND contributions_total >= 0
+    AND transfers_in >= 0 AND transfers_out >= 0 AND management_fees >= 0 AND fee_refunds >= 0
+    AND disability_cost >= 0 AND survivor_cost >= 0),
+  CHECK ('NaN'::numeric <> ALL(ARRAY[opening_balance,closing_balance,employee_contributions,employer_contributions,
+    severance_contributions,contributions_total,investment_gains,transfers_in,transfers_out,management_fees,
+    fee_refunds,disability_cost,survivor_cost,actuarial_adjustment,balance_adjustment]))
+);
+COMMENT ON TABLE public.retirement_reports IS 'Canonical calendar-year statements, including YTD reports. Transfers are separate from contributions and gains. Preserve reported totals and source rounding.';
+
 CREATE OR REPLACE FUNCTION public.touch_finance_income_updated_at()
 RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN NEW.updated_at = clock_timestamp(); RETURN NEW; END;
@@ -314,7 +366,8 @@ DO $security$
 DECLARE v_table text;
 BEGIN
   FOREACH v_table IN ARRAY ARRAY['shahar_income','kristin_income','income_month_overrides','cash_monthly_balances',
-    'investment_assets','savings_monthly_snapshots','savings_snapshot_assets','finance_events','finance_settings'] LOOP
+    'investment_assets','savings_monthly_snapshots','savings_snapshot_assets','finance_events','finance_settings',
+    'retirement_accounts','retirement_reports'] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY',v_table);
     EXECUTE format('REVOKE ALL ON public.%I FROM anon',v_table);
     EXECUTE format('GRANT ALL ON public.%I TO service_role',v_table);

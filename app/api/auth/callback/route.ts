@@ -4,14 +4,9 @@ export const runtime = 'nodejs';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
+import { safeAuthPath } from '../../../../lib/auth-redirect';
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
-
-function getSafeRedirectPath(value: string | null) {
-  if (!value?.startsWith('/')) return '/';
-  if (value.startsWith('//')) return '/';
-  return value;
-}
 
 function copyAuthState(
   response: NextResponse,
@@ -42,7 +37,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = requestUrl;
   const code = searchParams.get('code');
-  const next = getSafeRedirectPath(searchParams.get('next'));
+  const next = safeAuthPath(searchParams.get('next'));
 
   if (code) {
     const cookieStore = await cookies();

@@ -4,6 +4,8 @@ A Hebrew, RTL family finance application built with Next.js 14, React 18, TypeSc
 
 The overview shows family savings, investment holdings and income trends. Shahar and Kristin have separate income pages and database tables. Administrators can edit income and monthly totals; approved viewers have read access. Supabase Auth manages email/password and Google sign-in, sessions and refresh tokens.
 
+Pension and study-fund balances appear in the overview and separately for each person. Personal pages include sourced annual/YTD contributions, investment gains, costs and transfers. Missing statements remain unknown; retirement balances are shown separately from the existing monthly savings history.
+
 ## Local development
 
 Requires Node.js 20+ and npm 9+.
@@ -18,13 +20,13 @@ Copy `.env.example` to `.env.local` and configure:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
-# Optional: explicit public origin for production OAuth callbacks.
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 Run `db/schema.sql` in the Supabase SQL editor to create the complete application schema. See [database setup](db/README.md) for existing-project precautions and the financial data format.
 
 Enable the desired sign-in providers in Supabase Auth. For Google, configure its credentials in the Supabase dashboard. Add `http://localhost:3000/api/auth/callback` and the production equivalent to Supabase's redirect URL allowlist. The application does not use custom JWT secrets or store refresh tokens in public tables.
+
+Google sign-in returns to the browser origin that started it. `NEXT_PUBLIC_SITE_URL` is not used for this redirect; a local value in the deployment environment cannot override the production callback. Supabase's **Site URL** should be the production origin, and its redirect allowlist must include the production callback (including its `next` query parameter, e.g. `https://your-app.vercel.app/api/auth/callback**`) as well as the localhost callback used for development.
 
 ```sh
 npm run dev

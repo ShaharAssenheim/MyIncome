@@ -25,6 +25,7 @@ function load(file) {
 
 async function verify() {
   const finance = load("lib/finance-server.ts");
+  const retirement = load("lib/retirement.ts");
   const [overview, exported] = await Promise.all([finance.loadFinanceOverview(), finance.exportFinance()]);
   assert.equal(exported.schemaVersion, 2);
   for (const person of ["shahar", "kristin"]) {
@@ -38,10 +39,30 @@ async function verify() {
     .sort((a, b) => b.balance_date.localeCompare(a.balance_date))[0];
   assert.equal(overview.savings.cash, Number(latest.balance));
   assert.equal(overview.savings.cashAsOf, latest.balance_date);
+  const retirementData = retirement.retirementRecords(exported.retirementAccounts, exported.retirementReports);
+  for (const report of retirementData.reports) {
+    const check = retirement.retirementReconciliation(report);
+    assert.ok(Math.abs(check.difference) <= check.tolerance, `${report.id}: statement does not reconcile`);
+  }
   const baseline = process.argv.indexOf("--baseline");
   if (baseline !== -1) {
     assert.ok(process.argv[baseline + 1], "--baseline requires a schema-version-2 export path");
-    assert.deepEqual(JSON.parse(JSON.stringify(exported)), JSON.parse(fs.readFileSync(path.resolve(process.argv[baseline + 1]), "utf8")), "Finance records differ from the saved export");
+    const expected = JSON.parse(fs.readFileSync(path.resolve(process.argv[baseline + 1]), "utf8"));
+    const actual = JSON.parse(JSON.stringify(exported));
+    // Exports from before the additive retirement feature contain all the original tables.
+    for (const key of ["retirementAccounts", "retirementReports"]) if (!Object.hasOwn(expected, key)) delete actual[key];
+    assert.deepEqual(actual, expected, "Finance records differ from the saved export");
+  }
+  const retirementSource = process.argv.indexOf("--retirement-source");
+  if (retirementSource !== -1) {
+    assert.ok(process.argv[retirementSource + 1], "--retirement-source requires a private source JSON path");
+    const source = JSON.parse(fs.readFileSync(path.resolve(process.argv[retirementSource + 1]), "utf8"));
+    const expected = retirement.retirementRecords(source.accounts, source.reports);
+    const normalize = (data) => JSON.parse(JSON.stringify({
+      accounts: [...data.accounts].sort((a, b) => a.id.localeCompare(b.id)),
+      reports: [...data.reports].sort((a, b) => a.id.localeCompare(b.id)),
+    }));
+    assert.deepEqual(normalize(retirementData), normalize(expected), "Retirement records differ from the reviewed source");
   }
   let backupPath;
   if (process.argv.includes("--backup")) {
@@ -52,6 +73,8 @@ async function verify() {
     income: { shahar: exported.shaharIncome.length, kristin: exported.kristinIncome.length },
     cashMonths: exported.cashMonthlyBalances.length, savingsMonths: exported.savingsMonthlySnapshots.length,
     currentCash: overview.savings.cash, currentInvestments: overview.savings.portfolio,
+    retirementAccounts: retirementData.accounts.length, retirementReports: retirementData.reports.length,
+    ...(retirementSource !== -1 ? { retirementSourceVerified: true } : {}),
     ...(backupPath ? { backupPath } : {}),
   }, null, 2));
 }

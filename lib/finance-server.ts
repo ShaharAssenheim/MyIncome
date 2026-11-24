@@ -32,6 +32,8 @@ export async function exportFinance() {
     savingsSnapshotAssets: ["savings_snapshot_assets", ["snapshot_month", "asset_key"]],
     financeEvents: ["finance_events", ["display_order", "id"]],
     settings: ["finance_settings", ["id"]],
+    retirementAccounts: ["retirement_accounts", ["id"]],
+    retirementReports: ["retirement_reports", ["account_id", "period_end"]],
   } as const;
   const data = await Promise.all(Object.entries(tables).map(async ([key, [table, fields]]) =>
     [key, await readRows(table, [...fields])]));

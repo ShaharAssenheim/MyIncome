@@ -62,8 +62,8 @@ test("complete schema creates the current workspace and preserves data and permi
       INSERT INTO public.income_month_overrides(person,income_month,cash_amount,bit_amount,bank_amount,updated_by)
         VALUES('shahar','2026-06-01',0,0,800,'${owner}');
     `);
-    await t.test("11 RLS tables, three invoker views and separate income ledgers exist", async () => {
-      assert.equal((await db.query("SELECT count(*) AS n FROM pg_tables WHERE schemaname='public'")).rows[0].n, 11);
+    await t.test("13 RLS tables, three invoker views and separate income ledgers exist", async () => {
+      assert.equal((await db.query("SELECT count(*) AS n FROM pg_tables WHERE schemaname='public'")).rows[0].n, 13);
       assert.equal((await db.query("SELECT count(*) AS n FROM pg_views WHERE schemaname='public'")).rows[0].n, 3);
       assert.equal((await db.query("SELECT bool_and(relrowsecurity) AS ok FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r'")).rows[0].ok, true);
       assert.equal((await db.query("SELECT bool_and(reloptions @> ARRAY['security_invoker=true']) AS ok FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='v'")).rows[0].ok, true);
@@ -124,6 +124,35 @@ test("complete schema creates the current workspace and preserves data and permi
       const next = (await db.query("SELECT * FROM public.set_income_month_totals('kristin','2026-09-01',200,20,30,$1,$2)", [owner, first.updated_at])).rows[0];
       assert.equal(Number(next.cash_amount), 200);
       await db.exec("RESET ROLE");
+    });
+    await t.test("retirement records retain provenance and separate people, with viewer reads and admin-only writes", async () => {
+      await claims(db, owner);
+      await db.exec(`INSERT INTO public.retirement_accounts(id,person,product,provider,name,fund_type)
+        VALUES('shahar-pension','shahar','pension','Provider','Pension','comprehensive'),
+        ('kristin-study','kristin','study_fund','Other','Study fund','study_fund');
+        INSERT INTO public.retirement_reports(id,account_id,period_start,period_end,report_kind,opening_balance,closing_balance,
+          employee_contributions,employer_contributions,severance_contributions,contributions_total,investment_gains,
+          transfers_in,transfers_out,management_fees,fee_refunds,disability_cost,survivor_cost,actuarial_adjustment,
+          balance_adjustment,reported_precision,source_file,source_pages)
+        VALUES('statement','shahar-pension','2025-01-01','2025-12-31','annual',100,135,
+          10,10,10,30,5,0,0,0,0,0,0,0,0,2,'statement.pdf',ARRAY[2]);`);
+      await assert.rejects(db.exec("UPDATE public.retirement_reports SET closing_balance='NaN'"), /check constraint/);
+      await assert.rejects(db.exec("UPDATE public.retirement_reports SET period_end='2026-03-31'"), /check constraint/);
+      await assert.rejects(db.exec("UPDATE public.retirement_accounts SET person='other'"), /check constraint/);
+      await assert.rejects(db.exec("UPDATE public.retirement_accounts SET product='study_fund' WHERE id='shahar-pension'"), /check constraint/);
+      await claims(db, viewer);
+      assert.equal((await db.query("SELECT count(*) AS n FROM public.retirement_accounts")).rows[0].n, 2);
+      assert.equal((await db.query("SELECT source_file FROM public.retirement_reports")).rows[0].source_file, 'statement.pdf');
+      assert.equal((await db.query("UPDATE public.retirement_reports SET closing_balance=0 RETURNING id")).rows.length, 0);
+      await assert.rejects(db.exec("INSERT INTO public.retirement_accounts(id,person,product,provider,name,fund_type) VALUES('x','shahar','pension','P','N','comprehensive')"), /row-level security/);
+      await claims(db, outsider);
+      assert.equal((await db.query("SELECT * FROM public.retirement_reports")).rows.length, 0);
+      await claims(db, owner, 'anon');
+      await assert.rejects(db.exec("SELECT * FROM public.retirement_reports"), /permission denied/);
+      await db.exec("RESET ROLE");
+      const before = await contents(db);
+      await db.exec(schema);
+      assert.deepEqual(await contents(db), before);
     });
     await t.test("legacy tables stop schema setup before any data or policies can change", async () => {
       const before = await contents(db);

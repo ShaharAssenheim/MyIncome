@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     return Response.json(
       {
         error:
-          "טעינת הנתונים נכשלה. יש לוודא שהורצה מיגרציית finance-migration.local.sql.",
+          "טעינת הנתונים נכשלה. נסו שוב; יש לוודא שהוגדר מסד הנתונים לפי db/schema.sql.",
       },
       { status: 500 },
     );
