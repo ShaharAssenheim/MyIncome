@@ -17,54 +17,24 @@ const compiled = ts.transpileModule(
 ).outputText;
 const income = {};
 runInNewContext(compiled, { exports: income });
-const {
-  salaryIncomeDate,
-  salaryToIncome,
-  applyMonthlyOverrides,
-  personalSalaryRows,
-  personalSalarySummary,
-} = income;
+const { incomeRecordToRow, applyMonthlyOverrides, personalSalaryRows, personalSalarySummary, combinedSalaryTimeline } = income;
 
-function salary(payment_date, id = "salary-source", amount = 1200) {
-  return {
-    id,
-    bank_transaction_id: `bank-${id}`,
-    payment_date,
-    amount,
-    employer: "Example employer",
-    created_at: "2026-11-01T12:00:00Z",
-  };
+function payroll(income_date, id = "salary-source", amount = 1200, payment_date = null) {
+  return incomeRecordToRow({ id, income_date, payment_date, amount, payment_method: "bank", is_salary: true,
+    employer: "Example employer", description: "Salary", created_at: "2026-11-01T12:00:00Z" }, "shahar");
 }
 
-test("imported salary belongs to the previous month, including year and leap boundaries", () => {
-  for (const [receipt, workMonth] of [
-    ["2019-11-01", "2019-10-01"],
-    ["2020-01-01", "2019-12-01"],
-    ["2024-03-31", "2024-02-01"],
-    ["2025-03-31", "2025-02-01"],
-    ["2026-09-03", "2026-08-01"],
-  ])
-    assert.equal(salaryIncomeDate(receipt, true), workMonth);
+test("explicit work and payment dates survive repeated reads without shifting either date", () => {
+  const row = payroll("2019-12-01", "source", 1200, "2020-01-31");
+  assert.equal(row.date,"2019-12-01"); assert.equal(row.payment_date,"2020-01-31");
+  assert.equal(row.id,"salary-source"); assert.equal(row.amount,1200);
+  assert.deepEqual(payroll("2019-12-01", "source", 1200, "2020-01-31"),row);
 });
 
-test("receipt, source identity and amount survive repeated reads without another shift", () => {
-  const source = salary("2020-01-31");
-  const snapshot = JSON.stringify(source);
-  const first = salaryToIncome(source);
-  const next = salaryToIncome(source);
-  assert.equal(first.date, "2019-12-01");
-  assert.equal(first.payment_date, "2020-01-31");
-  assert.equal(next.date, first.date);
-  assert.equal(next.id, first.id);
-  assert.equal(first.amount, source.amount);
-  assert.equal(first.employer, source.employer);
-  assert.equal(JSON.stringify(source), snapshot);
-});
-
-test("October 2019 manual total remains exact after the November receipt moves into October", () => {
+test("October 2019 manual total remains exact using the explicitly stored work month", () => {
   const rows = [
-    salaryToIncome(salary("2019-11-01")),
-    salaryToIncome(salary("2019-12-01", "next-salary", 1500)),
+    payroll("2019-10-01"),
+    payroll("2019-11-01", "next-salary", 1500),
   ];
   const overrides = [
     {
@@ -91,10 +61,7 @@ test("October 2019 manual total remains exact after the November receipt moves i
 });
 
 test("manual dates and Kristin income remain in their selected months", () => {
-  const manualSalary = salaryToIncome({
-    ...salary("2019-10-15"),
-    bank_transaction_id: null,
-  });
+  const manualSalary = payroll("2019-10-15");
   assert.equal(manualSalary.date, "2019-10-15");
   const manual = {
     id: "manual",
@@ -111,8 +78,8 @@ test("manual dates and Kristin income remain in their selected months", () => {
 test("multiple salary payments in one month retain every payment and their combined total", () => {
   const result = applyMonthlyOverrides(
     [
-      salaryToIncome(salary("2024-03-01", "first", 200)),
-      salaryToIncome(salary("2024-03-24", "second", 300)),
+      payroll("2024-02-01", "first", 200),
+      payroll("2024-02-01", "second", 300),
     ],
     [],
   );
@@ -125,9 +92,9 @@ test("multiple salary payments in one month retain every payment and their combi
 });
 
 test("Shahar salary totals exclude general account transfers and other income", () => {
-  const payroll = salaryToIncome(salary("2024-03-01", "payroll", 1200));
+  const salaryRow = payroll("2024-02-01", "payroll", 1200);
   const rows = applyMonthlyOverrides([
-    payroll,
+    salaryRow,
     { id: "transfer", amount: 9000, type: "bank", date: "2024-02-02" },
     { id: "other-income", amount: 800, type: "cash", date: "2024-02-02" },
   ], []);
@@ -143,12 +110,12 @@ test("Shahar salary totals exclude general account transfers and other income", 
 
 test("zeroed salary months move both ends of the range and do not contribute to totals", () => {
   const source = [
-    salaryToIncome(salary("2019-07-01", "june", 1200)),
-    salaryToIncome(salary("2019-08-01", "july", 1600)),
-    salaryToIncome(salary("2019-10-01", "september", 1400)),
-    salaryToIncome(salary("2019-11-01", "october", 1800)),
-    salaryToIncome(salary("2019-12-01", "november", 1900)),
-    salaryToIncome(salary("2020-01-01", "december", 2000)),
+    payroll("2019-06-01", "june", 1200),
+    payroll("2019-07-01", "july", 1600),
+    payroll("2019-09-01", "september", 1400),
+    payroll("2019-10-01", "october", 1800),
+    payroll("2019-11-01", "november", 1900),
+    payroll("2019-12-01", "december", 2000),
     { id: "transfer", type: "bank", date: "2019-06-01", amount: 9000 },
   ];
   const rows = applyMonthlyOverrides(source,
@@ -167,8 +134,8 @@ test("zeroed salary months move both ends of the range and do not contribute to 
 
 test("edited salary totals replace the month rather than adding the adjustment as income", () => {
   const rows = applyMonthlyOverrides([
-    salaryToIncome(salary("2019-11-01", "first", 700)),
-    salaryToIncome(salary("2019-11-15", "second", 500)),
+    payroll("2019-10-01", "first", 700),
+    payroll("2019-10-01", "second", 500),
   ], [{
     person: "shahar", month: "2019-10-01", cash: 0, bit: 0, bank: 1199,
     updated_at: "2026-11-01T00:00:00Z",
@@ -182,8 +149,8 @@ test("edited salary totals replace the month rather than adding the adjustment a
 
 test("empty and zero-valued monthly totals have no date range for either person", () => {
   const shahar = applyMonthlyOverrides([
-    salaryToIncome(salary("2024-03-01", "first", 1000)),
-    salaryToIncome(salary("2024-04-01", "zero", 0)),
+    payroll("2024-02-01", "first", 1000),
+    payroll("2024-03-01", "zero", 0),
   ], [{
     person: "shahar", month: "2024-02-01", cash: 0, bit: 0, bank: 0,
     updated_at: "2026-11-01T00:00:00Z",
@@ -206,8 +173,8 @@ test("empty and zero-valued monthly totals have no date range for either person"
 test("each person's salary summary uses only their own records in the selected year", () => {
   const summary = personalSalarySummary({
     shahar: [
-      salaryToIncome(salary("2025-01-01", "december", 1500)),
-      salaryToIncome(salary("2025-02-01", "january", 2000)),
+      payroll("2024-12-01", "december", 1500),
+      payroll("2025-01-01", "january", 2000),
     ],
     kristin: [
       { id: "cash", date: "2024-12-05", type: "cash", amount: 100 },
@@ -230,7 +197,7 @@ test("each person's salary summary uses only their own records in the selected y
 
 test("salary summaries retain all periods and sum money in cents", () => {
   const shahar = Array.from({ length: 8 }, (_, index) =>
-    salaryToIncome(salary(`2024-${String(index + 2).padStart(2, "0")}-01`, `salary-${index}`, 100)),
+    payroll(`2024-${String(index + 1).padStart(2, "0")}-01`, `salary-${index}`, 100),
   );
   const summary = personalSalarySummary({
     shahar,
@@ -246,4 +213,81 @@ test("salary summaries retain all periods and sum money in cents", () => {
   assert.equal(summary.totals.kristin, 0.3);
   assert.equal(summary.months[0].kristin, 0.3);
   assert.equal(summary.months.reduce((sum, month) => sum + month.shahar, 0), 800);
+});
+
+test("yearly timeline shows January through December and averages recorded months only", () => {
+  const summary = personalSalarySummary({
+    shahar: [
+      payroll("2024-01-01", "january", 1000),
+      payroll("2024-08-01", "august", 2000),
+      payroll("2025-01-01", "other-year", 9000),
+    ],
+    kristin: [{ id: "cash", date: "2024-01-05", type: "cash", amount: 500 }],
+  });
+  const timeline = combinedSalaryTimeline(summary.months, "2024", "2026-11");
+  assert.equal(timeline.length, 12);
+  assert.equal(timeline[0].period, "2024-01");
+  assert.equal(timeline[11].period, "2024-12");
+  assert.equal(timeline[0].total, 1500);
+  assert.equal(timeline[0].shahar, 1000);
+  assert.equal(timeline[0].kristin, 500);
+  assert.equal(timeline[7].total, 2000);
+  assert.equal(timeline[7].shahar, 2000);
+  assert.equal(timeline[7].kristin, 0);
+  assert.equal(timeline[1].total, null);
+  assert.equal(timeline[1].shahar, null);
+  assert.equal(timeline[1].kristin, null);
+  assert.equal(timeline[11].total, null);
+  assert.ok(timeline.every((month) => month.annualAverage === 1750));
+});
+
+test("all years retain all months in order with a separate average for each year", () => {
+  const timeline = combinedSalaryTimeline([
+    { period: "2025-03", shahar: 1000, kristin: 2000 },
+    { period: "2024-12", shahar: 0.1, kristin: 0.2 },
+    { period: "2024-02", shahar: 0.2, kristin: 0.2 },
+  ], "all", "2026-11");
+  assert.equal(timeline.length, 24);
+  assert.equal(timeline[0].period, "2024-01");
+  assert.equal(timeline[11].period, "2024-12");
+  assert.equal(timeline[12].period, "2025-01");
+  assert.equal(timeline[23].period, "2025-12");
+  assert.equal(timeline[11].total, 0.3);
+  assert.ok(timeline.slice(0, 12).every((month) => month.annualAverage === 0.35));
+  assert.ok(timeline.slice(12).every((month) => month.annualAverage === 3000));
+});
+
+test("an empty year has no fabricated income or average", () => {
+  const timeline = combinedSalaryTimeline([], "2026", "2026-11");
+  assert.equal(timeline.length, 12);
+  assert.ok(timeline.every((month) => month.total === null && month.annualAverage === null));
+  assert.equal(combinedSalaryTimeline([], "all", "2026-11").length, 0);
+});
+
+test("the average excludes current and future months but retains their income in the chart", () => {
+  const timeline = combinedSalaryTimeline([
+    { period: "2026-01", shahar: 1000, kristin: 500 },
+    { period: "2026-10", shahar: 2000, kristin: 500 },
+    { period: "2026-11", shahar: 100, kristin: 50 },
+    { period: "2026-12", shahar: 9000, kristin: 1000 },
+  ], "2026", "2026-11");
+  assert.ok(timeline.every((month) => month.annualAverage === 2000));
+  assert.equal(timeline[10].total, 150);
+  assert.equal(timeline[10].shahar, 100);
+  assert.equal(timeline[10].kristin, 50);
+  assert.equal(timeline[11].total, 10000);
+});
+
+test("January has no completed months and December joins the average only next year", () => {
+  const months = [
+    { period: "2025-12", shahar: 1000, kristin: 1000 },
+    { period: "2026-01", shahar: 500, kristin: 500 },
+  ];
+  const december = combinedSalaryTimeline(months, "2025", "2025-12");
+  assert.equal(december[11].annualAverage, null);
+  const previousYear = combinedSalaryTimeline(months, "2025", "2026-01");
+  assert.ok(previousYear.every((month) => month.annualAverage === 2000));
+  const january = combinedSalaryTimeline(months, "2026", "2026-01");
+  assert.ok(january.every((month) => month.annualAverage === null));
+  assert.equal(january[0].total, 1000);
 });

@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest) {
     .safeParse(await request.json().catch(() => null));
   if (!parsed.success)
     return Response.json({ error: "יש להזין סכומים תקינים" }, { status: 400 });
-  const { data, error } = await admin.rpc("save_income_month", {
+  const { data, error } = await admin.rpc("set_income_month_totals", {
     p_person: parsed.data.person,
     p_month: parsed.data.month,
     p_cash: parsed.data.cash,

@@ -4,12 +4,15 @@ node_modules
 .pnp.js
 
 # Testing
+/tmp/
+/db/*.local.json
 coverage
 *.lcov
 .nyc_output
 
 # Next.js
 .next/
+.next-*/
 out/
 build
 dist

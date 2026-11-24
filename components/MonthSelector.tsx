@@ -11,7 +11,7 @@ export function MonthSelector({
   onNextMonth: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-1 rounded-lg bg-muted p-1">
+    <div className="flex w-full items-center justify-between gap-1 rounded-lg bg-muted p-1 sm:w-auto">
       <Button
         type="button"
         variant="ghost"
@@ -22,7 +22,7 @@ export function MonthSelector({
         <ChevronRight />
       </Button>
       <h2
-        className="flex min-w-36 items-center justify-center gap-2 px-2 text-sm font-medium"
+        className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2 text-sm font-medium sm:min-w-36"
         aria-live="polite"
       >
         <CalendarDays size={15} className="text-primary" aria-hidden="true" />

@@ -51,11 +51,7 @@ export function AppDialog({
                 '[data-slot="dropdown-menu-trigger"]',
               ) ?? false)
         }
-        className={
-          wide
-            ? "max-h-[90svh] overflow-y-auto sm:max-w-xl"
-            : "max-h-[90svh] overflow-y-auto"
-        }
+        className={wide ? "sm:max-w-xl" : undefined}
       >
         <DialogHeader className="pe-9">
           <DialogTitle>{title}</DialogTitle>

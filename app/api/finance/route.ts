@@ -1,4 +1,4 @@
-import { loadFinanceOverview } from "../../../lib/finance-data";
+import { loadFinanceOverview } from "../../../lib/finance-server";
 
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {

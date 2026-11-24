@@ -3,10 +3,11 @@ import { NextRequest } from "next/server";
 import supabaseServer from "../../../lib/supabase/admin";
 import { z } from "zod";
 import { readIncome } from "../../../lib/income-server";
+import { incomeTable } from "../../../lib/income";
 
 export const runtime = "nodejs";
 
-// GET /api/transactions - List all transactions for current user and shared users
+// GET /api/transactions - List income for the selected person in the family workspace.
 export async function GET(req: NextRequest) {
   const userId = req.headers.get("x-user-id");
   if (!userId) {
@@ -58,12 +59,9 @@ export async function POST(req: NextRequest) {
       );
     }
     const { amount, type, date, description, person } = parsed.data;
-
-    const { data, error } = await supabaseServer
-      .from("transactions")
-      .insert({ user_id: userId, amount, type, date, description, person })
-      .select()
-      .single();
+    const { data, error } = await supabaseServer.from(incomeTable(person)).insert({
+      owner_id: userId, amount, payment_method: type.toLowerCase(), income_date: date, description,
+    }).select().single();
 
     if (error) throw error;
     financeChanged();

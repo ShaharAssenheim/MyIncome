@@ -2,6 +2,7 @@ import { financeChanged } from "../../../../lib/finance-cache";
 import { NextRequest } from "next/server";
 import supabaseServer from "../../../../lib/supabase/admin";
 import { z } from "zod";
+import { findIncome } from "../../../../lib/income-server";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,7 @@ const UpdateSchema = z.object({
   date: z.string().min(4).max(40).optional(),
   description: z.string().max(500).optional(),
   employer: z.string().max(200).nullable().optional(),
+  payment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 
 export async function PUT(
@@ -32,59 +34,21 @@ export async function PUT(
     if (!parsed.success) {
       return Response.json({ error: "Invalid input" }, { status: 400 });
     }
-    const { amount, type, date, description, employer } = parsed.data;
-    if (id.startsWith("salary-")) {
-      const salaryId = z.string().uuid().safeParse(id.slice(7));
-      if (!salaryId.success)
-        return Response.json({ error: "Not found" }, { status: 404 });
-      const update: Record<string, unknown> = {};
-      if (amount !== undefined) update.amount = amount;
-      if (date !== undefined) update.payment_date = date;
-      if (employer !== undefined) update.employer = employer;
-      const { data, error } = await supabaseServer
-        .from("shahar_salaries")
-        .update(update)
-        .eq("id", salaryId.data)
-        .eq("is_deleted", false)
-        .select()
-        .single();
-      if (error)
-        return Response.json(
-          { error: "Salary update failed" },
-          { status: 400 },
-        );
-      financeChanged();
-      return Response.json(data);
-    }
-
-    // Verify ownership before updating
-    const { data: existing } = await supabaseServer
-      .from("transactions")
-      .select("user_id")
-      .eq("id", id)
-      .single();
-
-    if (!existing) {
-      return Response.json({ error: "Not found" }, { status: 404 });
-    }
-
-    const update: Record<string, any> = {};
+    const { amount, type, date, description, employer, payment_date } = parsed.data;
+    const record = await findIncome(id);
+    if (!record) return Response.json({ error: "Not found" }, { status: 404 });
+    const update: Record<string, unknown> = {};
     if (amount !== undefined) update.amount = amount;
-    if (type !== undefined) update.type = type;
-    if (date !== undefined) update.date = date;
+    if (type !== undefined) update.payment_method = type.toLowerCase();
+    if (date !== undefined) update.income_date = date;
+    if (payment_date !== undefined) update.payment_date = payment_date;
     if (description !== undefined) update.description = description;
-
-    if (Object.keys(update).length === 0) {
-      return Response.json({ error: "No fields to update" }, { status: 400 });
+    if (employer !== undefined) {
+      update.employer = employer;
+      if (record.is_salary && description === undefined) update.description = employer ? `משכורת · ${employer}` : "משכורת · המעסיק לא זוהה בדוח";
     }
-
-    const { data, error } = await supabaseServer
-      .from("transactions")
-      .update(update)
-      .eq("id", id)
-      .select()
-      .single();
-
+    if (!Object.keys(update).length) return Response.json({ error: "No fields to update" }, { status: 400 });
+    const { data, error } = await supabaseServer.from(record.table).update(update).eq("id", record.id).eq("is_deleted", false).select().single();
     if (error) throw error;
     financeChanged();
     return Response.json(data);
@@ -112,39 +76,9 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    if (id.startsWith("salary-")) {
-      const salaryId = z.string().uuid().safeParse(id.slice(7));
-      if (!salaryId.success)
-        return Response.json({ error: "Not found" }, { status: 404 });
-      const { error } = await supabaseServer
-        .from("shahar_salaries")
-        .update({ is_deleted: true })
-        .eq("id", salaryId.data);
-      if (error)
-        return Response.json(
-          { error: "Salary deletion failed" },
-          { status: 500 },
-        );
-      financeChanged();
-      return Response.json({ success: true });
-    }
-
-    // Verify ownership before deleting
-    const { data: existing } = await supabaseServer
-      .from("transactions")
-      .select("user_id")
-      .eq("id", id)
-      .single();
-
-    if (!existing) {
-      return Response.json({ error: "Not found" }, { status: 404 });
-    }
-
-    const { error } = await supabaseServer
-      .from("transactions")
-      .delete()
-      .eq("id", id);
-
+    const record = await findIncome(id);
+    if (!record) return Response.json({ error: "Not found" }, { status: 404 });
+    const { error } = await supabaseServer.from(record.table).update({ is_deleted: true }).eq("id", record.id);
     if (error) throw error;
     financeChanged();
     return Response.json({ success: true });

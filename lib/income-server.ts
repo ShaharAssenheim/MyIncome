@@ -1,78 +1,35 @@
-import admin from "./supabase/admin";
+import admin, { readRows } from "./supabase/admin";
 import { unstable_cache } from "next/cache";
-import {
-  applyMonthlyOverrides,
-  IncomeRow,
-  MonthOverride,
-  salaryToIncome,
-} from "./income";
+import { applyMonthlyOverrides, incomeRecordToRow, incomeTable, type IncomePerson, type IncomeRecord, type MonthOverride } from "./income";
 
-async function readManual(person: "kristin" | "shahar") {
-  const manual: IncomeRow[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await admin
-      .from("transactions")
-      .select("id,amount,type,date,description,created_at")
-      .eq("person", person)
-      .order("date")
-      .order("id")
-      .range(offset, offset + 999);
-    if (error) throw error;
-    manual.push(...data);
-    if (data.length < 1000) break;
-  }
-  return manual;
-}
-
-async function readSalaries(person: "kristin" | "shahar") {
-  const salary: IncomeRow[] = [];
-  if (person === "shahar") {
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await admin
-        .from("shahar_salaries")
-        .select(
-          "id,bank_transaction_id,payment_date,amount,employer,created_at",
-        )
-        .eq("is_deleted", false)
-        .order("payment_date")
-        .order("id")
-        .range(offset, offset + 999);
-      if (error) throw error;
-      salary.push(...data.map(salaryToIncome));
-      if (data.length < 1000) break;
-    }
-  }
-  return salary;
-}
-
-async function readOverrides(person: "kristin" | "shahar") {
-  const rows: MonthOverride[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await admin
-      .from("monthly_income_overrides")
-      .select("person,month,cash,bit,bank,updated_at")
-      .eq("person", person)
-      .order("month")
-      .range(offset, offset + 999);
-    if (error) throw error;
-    rows.push(...data);
-    if (data.length < 1000) return rows;
-  }
-}
-
-async function loadIncome(person: "kristin" | "shahar") {
-  const [manual, salary, overrides] = await Promise.all([
-    readManual(person),
-    readSalaries(person),
-    readOverrides(person),
+async function loadIncome(person: IncomePerson) {
+  const [records, edits] = await Promise.all([
+    readRows(incomeTable(person), ["income_date", "id"], "*", { is_deleted: false }),
+    readRows("income_month_overrides", ["income_month"], "*", { person }),
   ]);
-  return {
-    rows: applyMonthlyOverrides([...manual, ...salary], overrides),
-    overrides,
-  };
+  const overrides: MonthOverride[] = edits.map((row) => ({
+    person: row.person, month: row.income_month, cash: Number(row.cash_amount),
+    bit: Number(row.bit_amount), bank: Number(row.bank_amount), updated_at: row.updated_at,
+  }));
+  return { rows: applyMonthlyOverrides(records.map((row: IncomeRecord) => incomeRecordToRow(row, person)), overrides), overrides };
 }
 
-export const readIncome = unstable_cache(loadIncome, ["income-v3-work-month"], {
-  revalidate: 30,
-  tags: ["finance-data"],
+export const readIncome = unstable_cache(loadIncome, ["income-v7"], {
+  revalidate: 30, tags: ["finance-data"],
 });
+
+// Prefixes identify the person's table; ambiguous bare UUIDs never select one arbitrarily.
+export async function findIncome(identifier: string) {
+  const match = /^(salary|shahar|kristin)-(.+)$/.exec(identifier);
+  const id = match?.[2] ?? identifier;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  const tables = match ? [match[1] === "kristin" ? "kristin_income" : "shahar_income"] : ["shahar_income", "kristin_income"];
+  const matches = await Promise.all(tables.map(async (table) => {
+    const { data, error } = await admin.from(table).select("id,is_salary").eq("id", id).eq("is_deleted", false).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? { table, ...data } : null;
+  }));
+  const records = matches.filter(Boolean);
+  if (records.length !== 1 || (match?.[1] === "salary" && !records[0]!.is_salary)) return null;
+  return records[0]!;
+}

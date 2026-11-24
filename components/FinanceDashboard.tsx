@@ -21,7 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -39,22 +38,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  CalendarDays,
-  Upload,
-  WalletCards,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { invalidateData, seedData, useDataQuery } from "../lib/client-data";
-import { BankTransaction, FinanceData, money } from "../lib/finance";
-import { incomeDateParts } from "../lib/income-date";
-import { personalSalaryRows } from "../lib/income";
+import { FinanceData, money } from "../lib/finance";
 import { useAuth } from "../lib/useAuth";
 import { useSearchParams } from "next/navigation";
 import { FinanceOverview } from "./FinanceOverview";
+import { SavingsComparison } from "./SavingsComparison";
 const SavingsChart = dynamic(
   () => import("./FinanceCharts.tsx").then((module) => module.SavingsChart),
   {
@@ -62,64 +54,7 @@ const SavingsChart = dynamic(
     loading: () => <Skeleton className="h-72  bg-muted"></Skeleton>,
   },
 );
-const SalaryChart = dynamic(
-  () => import("./FinanceCharts.tsx").then((module) => module.SalaryChart),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-72  bg-muted"></Skeleton>,
-  },
-);
-const BankImport = dynamic(() =>
-  import("./BankImport.tsx").then((module) => module.BankImport),
-);
-const inputStyle = "w-full sm:w-60";
-type Section = "savings" | "salary" | "transactions" | "sources";
-function Stat({
-  title,
-  value,
-  detail,
-  plain = false,
-  icon: Icon = WalletCards,
-}: {
-  title: string;
-  value: string;
-  detail?: string;
-  plain?: boolean;
-  icon?: LucideIcon;
-}) {
-  if (plain)
-    return (
-      <dl>
-        <dt className="text-xs text-muted-foreground">{title}</dt>
-        <dd className="ui-number mt-3 text-2xl font-medium">{value}</dd>
-        {detail && (
-          <dd className="mt-2 text-[11px] leading-5 text-muted-foreground">
-            {detail}
-          </dd>
-        )}
-      </dl>
-    );
-  return (
-    <Card size="sm">
-      <CardHeader>
-        <CardDescription>{title}</CardDescription>
-        <CardAction>
-          <span className="metric-card-icon">
-            <Icon size={16} aria-hidden="true" />
-          </span>
-        </CardAction>
-      </CardHeader>
-      <CardContent>
-        <p className="metric-value">{value}</p>
-        {detail && (
-          <p className="mt-3 text-[10px] leading-5 text-muted-foreground">
-            {detail}
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+type Section = "savings" | "sources";
 function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob(["\uFEFF", text], { type }));
   const link = document.createElement("a");
@@ -133,95 +68,30 @@ export function FinanceDashboard({
 }: {
   initialData?: FinanceData;
 }) {
-  const { user, fetchWithAuth } = useAuth();
+  const { fetchWithAuth } = useAuth();
   const query = useDataQuery<FinanceData>("/api/finance", initialData);
   const [year, setYear] = useState("all");
   const searchParams = useSearchParams();
   const [section, setSection] = useState<Section>("savings");
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [page, setPage] = useState(0);
   const [monthPage, setMonthPage] = useState(0);
-  const [showImport, setShowImport] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState("");
   useEffect(() => {
     const view = searchParams.get("view");
-    setSection(view && ["savings", "salary", "transactions", "sources"].includes(view) ? view as Section : "savings");
-    setPage(0);
+    setSection(view && ["savings", "sources"].includes(view) ? view as Section : "savings");
   }, [searchParams]);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(0);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [search]);
   useEffect(() => {
     if (!query.data) return;
     seedData("/api/transactions?person=kristin", query.data.income.kristin);
     seedData("/api/transactions?person=shahar", query.data.income.shahar);
   }, [query.data]);
-  const bank = useDataQuery<{
-    rows: BankTransaction[];
-    count: number;
-  }>(
-    section === "transactions"
-      ? `/api/finance/transactions?year=${year}&page=${page}&search=${encodeURIComponent(debouncedSearch)}`
-      : null,
-  );
   const data = query.data;
   const statistics = useMemo(() => {
     if (!data) return null;
     const months = (data.savings?.monthly ?? []).filter(
       (row) => year === "all" || row.year === Number(year),
     );
-    const salary = personalSalaryRows(data.income.shahar, "shahar", year);
-    const monthly = new Map<string, number>();
-    salary.forEach((row) =>
-      monthly.set(
-        row.date.slice(0, 7),
-        Math.round(
-          ((monthly.get(row.date.slice(0, 7)) ?? 0) + Number(row.amount)) * 100,
-        ) / 100,
-      ),
-    );
-    const now = incomeDateParts();
-    const currentPeriod = `${now.year}-${String(now.month).padStart(2, "0")}`;
-    const completed = [...monthly].filter(
-      ([month, amount]) => month < currentPeriod && amount !== 0,
-    );
-    const chart = new Map<string, number>();
-    if (year === "all")
-      monthly.forEach((amount, month) =>
-        chart.set(
-          month.slice(0, 4),
-          (chart.get(month.slice(0, 4)) ?? 0) + amount,
-        ),
-      );
-    else
-      for (let index = 1; index <= 12; index++)
-        chart.set(
-          String(index),
-          monthly.get(`${year}-${String(index).padStart(2, "0")}`) ?? 0,
-        );
-    return {
-      months,
-      latest: months.at(-1),
-      salaryTotal: salary.reduce((sum, row) => sum + Number(row.amount), 0),
-      average: completed.length
-        ? completed.reduce((sum, [, value]) => sum + value, 0) /
-          completed.length
-        : null,
-      chart: [...chart]
-        .sort((a, b) =>
-          year === "all"
-            ? a[0].localeCompare(b[0])
-            : Number(a[0]) - Number(b[0]),
-        )
-        .slice(-12)
-        .map(([label, amount]) => ({ label, amount })),
-    };
+    return { months, latest: months.at(-1) };
   }, [data, year]);
   const years = useMemo(
     () =>
@@ -237,10 +107,6 @@ export function FinanceDashboard({
             .sort()
             .reverse()
         : [],
-    [data],
-  );
-  const importNames = useMemo(
-    () => new Map(data?.imports.map((item) => [item.id, item.filename]) ?? []),
     [data],
   );
   const sourceDifferences = useMemo(() => {
@@ -296,7 +162,6 @@ export function FinanceDashboard({
               onValueChange={(value) => {
                 if (value !== null) {
                   setYear(String(value));
-                  setPage(0);
                   setMonthPage(0);
                 }
               }}
@@ -316,17 +181,6 @@ export function FinanceDashboard({
                 </SelectGroup>
               </SelectContent>
             </Select>
-            {user?.isAdmin && (
-              <Button
-                onClick={() => setShowImport((value) => !value)}
-                aria-expanded={showImport}
-                className=""
-                type="submit"
-              >
-                <Upload data-icon="inline-start" />
-                ייבוא דוח
-              </Button>
-            )}
           </div>
         </div>
         {(query.error || actionError) && (
@@ -346,9 +200,6 @@ export function FinanceDashboard({
             </AlertDescription>
           </Alert>
         )}
-        {user?.isAdmin && showImport && (
-          <BankImport onImported={invalidateData} />
-        )}
         {query.loading && !data && (
           <Skeleton role="status" className="h-48  rounded-2xl bg-muted">
             <span className="sr-only">טוען נתונים…</span>
@@ -359,11 +210,10 @@ export function FinanceDashboard({
             value={section}
             onValueChange={(value) => {
               setSection(value as Section);
-              setPage(0);
             }}
             className="gap-6"
           >
-            <FinanceOverview data={data} statistics={statistics} year={year} />
+            <FinanceOverview data={data} statistics={statistics} />
             <TabsList
               id="finance-details"
               aria-label="פירוט הנתונים הכלכליים"
@@ -373,8 +223,6 @@ export function FinanceDashboard({
               {(
                 [
                   ["savings", "חיסכון והשקעות"],
-                  ["salary", "משכורות"],
-                  ["transactions", "תנועות בנק"],
                   ["sources", "מקורות ואירועים"],
                 ] as const
               ).map(([value, label]) => (
@@ -420,12 +268,10 @@ export function FinanceDashboard({
                           <CardContent>
                             <div className="portfolio-positions">
                               {data.savings.holdings.map((item) => (
-                                <Stat
-                                  plain
-                                  key={item.name}
-                                  title={item.name}
-                                  value={money(item.value)}
-                                />
+                                <dl key={item.name}>
+                                  <dt className="text-xs text-muted-foreground">{item.name}</dt>
+                                  <dd className="ui-number text-2xl font-medium">{money(item.value)}</dd>
+                                </dl>
                               ))}
                             </div>
                           </CardContent>
@@ -468,13 +314,11 @@ export function FinanceDashboard({
                         </CardAction>
                       </CardHeader>
                       <CardContent>
+                        <SavingsComparison snapshots={data.savings?.monthly ?? []} />
                         <div
                           className="rounded-xl border border-border"
-                          tabIndex={0}
-                          role="region"
-                          aria-label="טבלת נתונים"
                         >
-                          <Table className="">
+                          <Table aria-label="יתרות חודשיות">
                             <TableHeader>
                               <TableRow>
                                 {[
@@ -570,178 +414,6 @@ export function FinanceDashboard({
                 }
               </TabsContent>
             )}
-            {section === "salary" && (
-              <TabsContent value="salary" className="flex flex-col gap-6">
-                {
-                  <>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Stat
-                        title="משכורות שחר"
-                        value={money(statistics.salaryTotal)}
-                      />
-                      <Stat
-                        title="ממוצע לחודש שהסתיים"
-                        value={
-                          statistics.average === null
-                            ? "—"
-                            : money(statistics.average)
-                        }
-                        detail="חודשים שסכומם שונה מאפס"
-                      />
-                    </div>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>
-                          {year === "all"
-                            ? "הכנסות לפי שנים · עד 12 שנים אחרונות"
-                            : `הכנסות לפי חודשים · ${year}`}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <SalaryChart data={statistics.chart} />
-                      </CardContent>
-                    </Card>
-                    <Link
-                      href="/shahar"
-                      className="inline-block text-sm font-semibold text-primary underline"
-                    >
-                      פירוט המשכורות, המעסיקים ועריכת חודש בעמוד שחר
-                    </Link>
-                  </>
-                }
-              </TabsContent>
-            )}
-            {section === "transactions" && (
-              <TabsContent value="transactions" className="flex flex-col gap-6">
-                {
-                  <Card>
-                    <CardHeader className="trend-header">
-                      <CardTitle>
-                        תנועות בנק · {bank.data?.count ?? "…"}
-                      </CardTitle>
-                      <CardAction>
-                        <Input
-                          value={search}
-                          onChange={(event) => setSearch(event.target.value)}
-                          aria-label="חיפוש תנועות"
-                          placeholder="תיאור, תאריך או סכום"
-                          className={inputStyle}
-                        />
-                      </CardAction>
-                    </CardHeader>
-                    <CardContent>
-                      {bank.error && (
-                        <p role="alert" className="text-destructive">
-                          {bank.error}
-                        </p>
-                      )}
-                      {bank.loading ? (
-                        <p
-                          role="status"
-                          className="py-10 text-center text-muted-foreground"
-                        >
-                          טוען תנועות…
-                        </p>
-                      ) : (
-                        <div
-                          className="rounded-xl border border-border"
-                          tabIndex={0}
-                          role="region"
-                          aria-label="טבלת נתונים"
-                        >
-                          <Table className="">
-                            <TableHeader>
-                              <TableRow>
-                                {[
-                                  "תאריך",
-                                  "תיאור",
-                                  "סכום",
-                                  "יתרה לאחר הפעולה",
-                                  "מקור",
-                                ].map((label) => (
-                                  <TableHead
-                                    key={label}
-                                    className="whitespace-nowrap p-3 text-muted-foreground"
-                                  >
-                                    {label}
-                                  </TableHead>
-                                ))}
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {bank.data?.rows.map((row) => (
-                                <TableRow
-                                  key={row.id}
-                                  className="border-t border-border"
-                                >
-                                  <TableCell className="whitespace-nowrap p-3">
-                                    {row.date}
-                                  </TableCell>
-                                  <TableCell className="min-w-52 p-3">
-                                    <p>{row.description}</p>
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                      {row.detail}
-                                    </p>
-                                  </TableCell>
-                                  <TableCell
-                                    className={
-                                      "whitespace-nowrap p-3 tabular-nums " +
-                                      (row.amount < 0
-                                        ? "text-destructive"
-                                        : "text-positive")
-                                    }
-                                  >
-                                    {money(row.amount)}
-                                  </TableCell>
-                                  <TableCell className="whitespace-nowrap p-3 tabular-nums">
-                                    {money(row.balance)}
-                                  </TableCell>
-                                  <TableCell className="p-3 text-xs text-muted-foreground">
-                                    {importNames.get(row.import_id)} · עמ׳{" "}
-                                    {row.source_page}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                          {!bank.data?.rows.length && (
-                            <p className="py-10 text-center text-muted-foreground">
-                              אין תנועות תואמות.
-                            </p>
-                          )}
-                        </div>
-                      )}
-                      <div className="ui-pagination">
-                        <Button
-                          className=""
-                          disabled={page === 0 || bank.loading}
-                          onClick={() => setPage((value) => value - 1)}
-                          type="submit"
-                          variant="outline"
-                        >
-                          הקודם
-                        </Button>
-                        <span>
-                          עמוד {page + 1} מתוך{" "}
-                          {Math.max(1, Math.ceil((bank.data?.count ?? 0) / 50))}
-                        </span>
-                        <Button
-                          variant="outline"
-                          disabled={
-                            bank.loading ||
-                            (page + 1) * 50 >= (bank.data?.count ?? 0)
-                          }
-                          onClick={() => setPage((value) => value + 1)}
-                          type="submit"
-                        >
-                          הבא
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                }
-              </TabsContent>
-            )}
             {section === "sources" && (
               <TabsContent value="sources" className="flex flex-col gap-6">
                 {
@@ -759,28 +431,6 @@ export function FinanceDashboard({
                         ))}
                       </Alert>
                     )}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>דוחות שיובאו</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {data.imports.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex flex-wrap justify-between gap-2 border-b border-border py-3 text-sm"
-                          >
-                            <span>{item.filename}</span>
-                            <span className="text-muted-foreground">
-                              {item.inserted_count} נוספו מתוך {item.row_count}{" "}
-                              ·{" "}
-                              {new Date(item.imported_at).toLocaleDateString(
-                                "he-IL",
-                              )}
-                            </span>
-                          </div>
-                        ))}
-                      </CardContent>
-                    </Card>
                     <Card>
                       <CardHeader>
                         <CardTitle>אירועים והעברות בחיסכון</CardTitle>
@@ -821,7 +471,7 @@ export function FinanceDashboard({
                             <li key={note}>{note}</li>
                           ))}
                         </ul>
-                        <p className="mt-4 text-sm text-muted-foreground">
+                        <p className="mt-4 text-sm text-muted-foreground [overflow-wrap:anywhere]">
                           {data.savings?.sources.join(" · ")}
                         </p>
                         <Button

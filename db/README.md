@@ -1,31 +1,54 @@
-# Supabase migration
+# Database
 
-Run **finance-migration.local.sql** in the existing MyIncome Supabase project.
+`schema.sql` is the single, complete definition of the current application schema. It contains all 11 public tables, three security-invoker views, indexes, RLS policies, the monthly-edit RPC, and Supabase Auth admission/profile triggers. Supabase provides the `auth` schema and API roles.
 
-1. Open SQL Editor and create a new query.
-2. Paste the entire SQL file and click Run.
-3. Refresh MyIncome after the query succeeds.
+| Table | Purpose |
+| --- | --- |
+| `auth_users` | Application profiles linked to financial records |
+| `site_allowed_emails` | Approved viewer emails; managed through the server |
+| `shahar_income` | Shahar's income, including explicit work and payment dates |
+| `kristin_income` | Kristin's separate income ledger |
+| `income_month_overrides` | Explicit monthly cash/Bit/bank totals and edit versions |
+| `cash_monthly_balances` | Reported current-account balances and source reference balances |
+| `investment_assets` | Asset metadata and current valuations |
+| `savings_monthly_snapshots` | Historical cash, reported totals and accuracy status |
+| `savings_snapshot_assets` | Nonzero asset balances in each historical snapshot |
+| `finance_events` | Dated financial events |
+| `finance_settings` | Household owner, schema version, snapshot date, notes and sources |
 
-The file contains the application schema, finance tables, access policies, import function, both original savings JSON datasets, and all nine parsed bank statements. Data is assigned to the existing Shahar profile identified in the script.
+The views are `family_income`, `income_monthly_summary` and `savings_monthly_summary`. They calculate results from these tables without storing duplicate data. Shahar and Kristin remain separate tables.
 
-The `person` field separates manual income for Kristin and Shahar. Existing income records default to Kristin. Imported Shahar payroll is displayed as bank-transfer income in the previous calendar month (the work month). A January receipt belongs to December of the preceding year. Each salary entry also shows its original bank receipt date.
+## Setup and reapplication
 
-Payroll now has a dedicated `shahar_salaries` table with payment date, generated year and month, amount, employer when identified, and a unique link to the bank transaction. The migration backfills existing payroll. A trigger captures future salary imports. Re-imports preserve edited or soft-deleted salary records.
+Run `schema.sql` in the SQL editor of a Supabase project before registering application users. The administrator email in the SQL must match `lib/site-access.ts`. Sign-in providers and redirect URLs are Supabase dashboard configuration, separate from the application schema.
 
-`payment_date` and the generated database `year`/`month` retain the receipt date. The application derives the work month from that source on each read, before applying monthly overrides, so existing records and future imports follow the same rule without moving a salary twice. Manual income and salaries without a bank source retain their assigned dates. Existing manual month totals, including Shahar's October 2019 correction, remain unchanged. The JSON export includes a derived `salary_month` alongside each salary's original payment fields. This correction requires no database migration.
+The SQL creates structure, not private financial seed data. A new project needs its own income, assets, balances and a `finance_settings` row with `schema_version = 2`. Existing financial exports contain the values to restore into the corresponding tables; `owner_id` and `updated_by` must reference the appropriate profiles/Auth users in the destination project.
 
-On either income page, choose a month and use the administrator's monthly edit button to set the cash, Bit, and bank-transfer totals. `monthly_income_overrides` stores those totals and the editing administrator. The original receipts remain available, with an adjustment entry explaining the difference. New imports preserve an explicitly edited month's totals. Concurrent saves require the latest version and return a conflict instead of overwriting another edit.
+Reapplying the SQL to the matching version-2 schema preserves all records, UUIDs, dates and edit versions. It recreates the known functions, policies and triggers, and reloads the PostgREST schema cache. The consolidated definition also explicitly revokes anonymous profile access and direct public execution of Auth trigger functions. It has not been reapplied to the hosted database as part of repository cleanup.
 
-`bank_yearly_summary` and `bank_monthly_closing` provide compact bank aggregates. The overview streams initial server data and loads transaction details in pages of 50. Shared financial data has a 30-second server cache, and income/import changes invalidate the server cache and browser data. Admission checks remain live on protected requests.
+If retired tables exist, the script stops before changing the schema. It is not a replacement for historical data migration or an automatic repair of arbitrary schema drift. The completed migrations remain recorded in the hosted Supabase migration history:
 
-Only the verified email `shacharassen3667@gmail.com` is the site administrator. The administrator manages approved login emails through the main menu. The migration adds `site_allowed_emails`, blocks unapproved new signups, and applies restrictive access policies to existing application tables. Existing users and financial records are preserved. Other existing emails require explicit approval to regain access.
+- `20261124131919_normalize_finance`
+- `20261124132034_retire_legacy_finance`
+- `20261124133029_retire_legacy_access`
 
-Approved emails can view the full shared financial workspace, including both income pages and bank and savings data. Only the administrator can add, import, edit, or delete data. The main menu provides one access-management control. Revoking login approval blocks subsequent requests even when a user still has a Supabase session.
+Their local one-off SQL, legacy bootstrap SQL and deletion/compaction scripts have been retired. The verified private JSON snapshots and before/after cleanup records remain excluded from Git.
 
-The migration executes in a single atomic `DO` statement and verifies expected bank records before committing. This keeps temporary verification tables in the same transaction and session. Repeated runs preserve existing datasets and skip duplicate transactions.
+## Data rules
 
-Before applying changes, it snapshots existing records in the application, finance, and approved-email tables. It verifies that every existing row is still present with its original values before committing. Any mismatch rolls back the entire migration.
+- `income_date` is authoritative for reporting; reading an income row never shifts it from `payment_date`.
+- Money uses `numeric(18,2)`. Unsupported payment methods and NaN are rejected.
+- Income supports soft deletion and maintained `updated_at` timestamps.
+- Monthly overrides replace totals and reject stale edit versions atomically.
+- Preserve `reported_total`, including historical one-cent rounding differences. `component_total` is a separate computed value.
+- A missing `savings_snapshot_assets` row means zero for that asset/month.
+- Cash and investment valuation dates are independent. Do not infer investment value from purchase amounts.
+- Approved viewers can read the family workspace. Only the administrator can mutate it through authenticated access. The monthly-edit RPC is service-role-only.
 
-For the supplied data, the final query returns 2 datasets, 9 statement files, 1,519 unique bank transactions, and 85 salary payments. Counts can be higher if additional records have already been imported.
+## Verification
 
-The SQL file contains personal financial data and is excluded from Git by the db/*.local.sql rule.
+`npm run test:db` runs the complete schema on PGlite and verifies fresh installation, data-preserving reapplication, signup/profile triggers, separate income dates, historical rounding, monthly overrides, RLS, admin writes, stale-edit rejection and safe refusal of legacy schemas.
+
+`npm run verify:finance` reads the configured live database using the application's actual data-access functions. Add `-- --backup` to save an exclusive private `db/finance-export-*.local.json` export. Add `-- --baseline <export-path>` to compare every exported financial row against an earlier version-2 export. Neither mode writes to the database.
+
+The previous rollout preserved 87 Shahar entries, 82 Kristin entries, 95 cash months, 95 historical snapshots and 75 nonzero historical asset balances. Cash was ILS 37,321.43 as of 2026-11-23 and investments were ILS 1,000,747.32. The access cleanup retained identical checksums in all 11 surviving tables.

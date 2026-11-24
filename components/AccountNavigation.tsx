@@ -1,8 +1,6 @@
 "use client";
 import {
   ChevronDown,
-  ArrowLeftRight,
-  BarChart3,
   CalendarDays,
   FolderOpen,
   Home,
@@ -106,12 +104,10 @@ function SignedInNavigation({ pathname }: { pathname: string }) {
             <div className="nav-divider" />
             <p className="nav-section-label">נתונים</p>
             {[
-              { view: "transactions", label: "תנועות בנק", icon: ArrowLeftRight },
               { view: "savings", label: "חיסכון והשקעות", icon: PiggyBank },
-              { view: "salary", label: "משכורות", icon: BarChart3 },
               { view: "sources", label: "דוחות ומקורות", icon: FolderOpen },
             ].map(({ view, label, icon: Icon }) => (
-              <Link key={view} href={`/?view=${view}#finance-details`} className="site-nav-link">
+              <Link key={view} href={`/?view=${view}#finance-details`} className="site-nav-link site-nav-detail">
                 <Icon size={20} aria-hidden="true" />{label}
               </Link>
             ))}

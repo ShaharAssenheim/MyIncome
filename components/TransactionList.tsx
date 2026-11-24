@@ -94,7 +94,7 @@ export function TransactionList({
                     <p className="entry-description">{t.description}</p>
                   )}
                 </div>
-                <div className="ms-auto flex items-center gap-3">
+                <div className="entry-meta ms-auto flex items-center gap-3">
                   <time
                     className="text-[11px] text-muted-foreground"
                     dateTime={t.paymentDate ?? t.date}

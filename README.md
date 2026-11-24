@@ -1,421 +1,96 @@
-# 💰 MyIncome - Personal Income Tracker
+# MyIncome
 
-A modern, secure personal income tracking application built with **Next.js 16**, **React 18**, **TypeScript**, **Supabase**, and **Tailwind CSS**. Features dual authentication (Email/Password + Google OAuth), real-time data visualization, and multi-user support.
+A Hebrew, RTL family finance application built with Next.js 14, React 18, TypeScript, Tailwind CSS 4 and Supabase.
 
----
+The overview shows family savings, investment holdings and income trends. Shahar and Kristin have separate income pages and database tables. Administrators can edit income and monthly totals; approved viewers have read access. Supabase Auth manages email/password and Google sign-in, sessions and refresh tokens.
 
-## 🚀 Quick Start (5 Minutes)
+## Local development
 
-### Prerequisites
-- Node.js 18+
-- Supabase account (free tier)
-- Google OAuth credentials (optional)
+Requires Node.js 20+ and npm 9+.
 
-### Installation
+```sh
+npm ci
+```
 
-```bash
-# 1. Clone and install
-git clone <your-repo-url>
-cd myincome
-npm install
+Copy `.env.example` to `.env.local` and configure:
 
-# 2. Set up environment
-cp .env.example .env.local
-# Edit .env.local with your credentials
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
+# Optional: explicit public origin for production OAuth callbacks.
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
-# 3. Run the app
+Run `db/schema.sql` in the Supabase SQL editor to create the complete application schema. See [database setup](db/README.md) for existing-project precautions and the financial data format.
+
+Enable the desired sign-in providers in Supabase Auth. For Google, configure its credentials in the Supabase dashboard. Add `http://localhost:3000/api/auth/callback` and the production equivalent to Supabase's redirect URL allowlist. The application does not use custom JWT secrets or store refresh tokens in public tables.
+
+```sh
 npm run dev
 ```
 
-Visit **http://localhost:3000** 🎉
+Open http://localhost:3000. The administrator email is defined in `lib/site-access.ts` and the SQL admission helpers; keep them consistent when adapting the project. Additional viewers must be approved through the account menu before registering.
 
-### Install as an application (PWA)
+## Commands
 
-Serve the app over HTTPS (or localhost during development). Choose **התקנת האפליקציה** in the account menu or on the login screen. Chrome and Edge show their native install prompt when available; other browsers receive installation instructions. On iPhone/iPad use Share → Add to Home Screen, keeping Open as Web App enabled when shown. On macOS Safari use File → Add to Dock.
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start local development |
+| `npm run type-check` | Check TypeScript |
+| `npm test` | Run all regression tests |
+| `npm run test:db` | Rehearse the complete SQL on in-memory PostgreSQL |
+| `npm run test:income` | Check income calculations |
+| `npm run test:finance` | Check family balance calculations |
+| `npm run test:bank` | Check PDF parsing |
+| `npm run test:pwa` | Check installation and offline behavior |
+| `npm run verify:finance` | Read-only checks against the configured live database |
+| `npm run build` | Build the production application |
+| `npm start` | Serve the production build |
 
-Launch **MyIncome from its installed icon** to open it in a standalone window without the browser address bar. Opening the website URL in a browser tab keeps the normal browser UI. Login, both income pages, and the authentication callback are within the application's scope.
+## Structure
 
-The service worker caches only the generic offline screen. Account pages, API responses, and financial records are fetched from the network and are not cached by the service worker. Run `npm run test:pwa` to verify the manifest, icon sizes, public installation resources, authentication gating, and offline behavior.
-
----
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-Create `.env.local` with:
-
-```env
-# Supabase (Required)
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# JWT Secrets (Required) - Generate with:
-# node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-JWT_ACCESS_SECRET=your-access-token-secret-32-chars-min
-JWT_REFRESH_SECRET=your-refresh-token-secret-32-chars-min
-
-# Google OAuth (Optional)
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret
-
-# App Settings
-APP_URL=http://localhost:3000
-NODE_ENV=development
+```text
+app/                         Pages, protected API routes and global styles
+components/                  Finance/income views and shared UI components
+lib/finance-server.ts        Family overview and financial export
+lib/income-server.ts         Income reads and record lookup
+lib/finance-records.ts       Pure database-to-overview conversion
+lib/income.ts                Income types, conversion and calculations
+lib/supabase/                Browser/server clients and paginated database reads
+lib/bank/parse-statement.mjs  PDF parsers; no database writes
+db/schema.sql                Complete current application schema
+scripts/                     Read-only verification and PDF extraction
+tests/                       SQL, API, financial calculation, parser and PWA tests
 ```
 
-### Database Setup
+The current application uses normalized schema version 2 directly. Completed migration fallbacks, old table-cleanup utilities, disabled bank-import routes and the diagnostic session endpoint have been removed.
 
-1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor
-3. Run the scripts in `db/` folder in order:
-   - `01_auth_users.sql` - User accounts table
-   - `02_auth_refresh_tokens.sql` - Refresh tokens storage
-   - `03_transactions.sql` - Transaction records
-   - `04_user_shares.sql` - User sharing system
-   - `05_accessible_users_view.sql` - Combined data view
+## Financial reports and backups
 
-### Google OAuth Setup (Optional)
+Automatic PDF uploads and complete bank-transaction storage are disabled. To extract salary receipts and monthly closing balances for review:
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a project
-3. Enable "Google+ API"
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URIs:
-   - Development: `http://localhost:3000/api/auth/google/callback`
-   - Production: `https://yourdomain.com/api/auth/google/callback`
-6. Copy Client ID & Secret to `.env.local`
-
----
-
-## ✨ Features
-
-### 🔐 Authentication & Security
-- **Email/Password + Google OAuth** authentication
-- **JWT tokens** with automatic refresh (15 min access, 7-14 days refresh)
-- **CSRF protection** on all state-changing operations
-- **HttpOnly cookies** for refresh tokens (XSS protection)
-- **Bcrypt password hashing** with 10 salt rounds
-- **Rate limiting** on API endpoints
-- **Input validation** with Zod schemas
-- **Database user isolation** for data security
-
-### 📊 Income Management
-- **Three categories**: Cash, Bit (Digital), Bank Transfer
-- **Track transactions** with amount, date, and description
-- **Monthly filtering** with calendar navigation
-- **Real-time statistics** with animated summary cards
-- **Visual trends chart** powered by Recharts
-- **Transaction history** with instant delete
-
-### 👥 Multi-User Support
-- **Share access** with family or partners
-- **View combined income** from multiple shared accounts
-- **Access control** - manage who can see your data
-- **Database-level security** with proper isolation
-
-### 🎨 Modern UI/UX
-- **Responsive design** - works on mobile, tablet, desktop
-- **RTL support** - full Hebrew language interface
-- **Smooth animations** with Framer Motion
-- **Skeleton loading** states for better perceived performance
-- **Error handling** with user-friendly messages
-- **Tailwind CSS** for beautiful, consistent styling
-
-### ⚡ Performance
-- **Smart caching** - prevents duplicate API calls
-- **Optimistic updates** - instant UI feedback
-- **Client-side navigation** - no full page reloads
-- **Efficient re-renders** - optimized React components
-- **Middleware protection** - fast route authentication
-
----
-
-## 🏗️ Project Structure
-
-```
-myincome/
-├── app/                      # Next.js 16 App Router
-│   ├── api/                  # API Routes
-│   │   ├── auth/            # Authentication endpoints
-│   │   │   ├── login/       # Email/password login
-│   │   │   ├── register/    # User registration
-│   │   │   ├── logout/      # Logout
-│   │   │   ├── refresh/     # Token refresh
-│   │   │   └── google/      # Google OAuth
-│   │   ├── transactions/    # Transaction CRUD
-│   │   ├── shares/          # User sharing
-│   │   └── users/           # User management
-│   ├── login/               # Login page
-│   ├── layout.tsx           # Root layout
-│   ├── page.tsx             # Main dashboard
-│   └── globals.css          # Global styles
-│
-├── components/              # React Components
-│   ├── CategoryCard.tsx     # Income category card
-│   ├── MonthSelector.tsx    # Month navigation
-│   ├── SiteAccessManagement.tsx  # Approved site viewers
-│   ├── SummaryCard.tsx      # Monthly summary
-│   ├── TransactionList.tsx  # Transaction table
-│   ├── TransactionModal.tsx # Add transaction modal
-│   └── TrendsChart.tsx      # Income trends chart
-│
-├── lib/                     # Utilities
-│   ├── auth/               # Authentication
-│   │   ├── db.supabase.ts  # Auth database ops
-│   │   ├── hash.ts         # Password hashing
-│   │   ├── jwt.ts          # JWT management
-│   │   └── useAuth.ts      # Auth React hook
-│   └── security/
-│       └── csrf.ts         # CSRF protection
-│
-├── db/                     # Database SQL Scripts
-│   ├── 01_auth_users.sql
-│   ├── 02_auth_refresh_tokens.sql
-│   ├── 03_transactions.sql
-│   ├── 04_user_shares.sql
-│   └── 05_accessible_users_view.sql
-│
-├── middleware.ts           # Route protection
-├── supabaseServer.ts      # Supabase client
-├── types.ts               # TypeScript types
-└── constants.tsx          # App constants
+```sh
+node scripts/extract-current-account.mjs path/to/report.pdf
 ```
 
----
+This command has no database connection. Updates must preserve the independent income/payment dates and cash/investment valuation dates. A purchase amount does not establish a new investment valuation.
 
-## 🔒 Security Features
+Export the financial records through the overview's export action, or save a private local export and compare it later:
 
-### Authentication
-- ✅ JWT with short expiration (15 minutes)
-- ✅ Refresh token rotation (7-14 days)
-- ✅ HttpOnly cookies (not accessible via JavaScript)
-- ✅ Bcrypt password hashing
-- ✅ Google OAuth 2.0 integration
-
-### API Security
-- ✅ CSRF tokens for POST/DELETE requests
-- ✅ Rate limiting per IP
-- ✅ Input validation with Zod
-- ✅ SQL injection protection (parameterized queries)
-- ✅ User ID verification in middleware
-
-### Best Practices
-```typescript
-// ✅ DO: Use environment variables
-const secret = process.env.JWT_SECRET;
-
-// ❌ DON'T: Hardcode secrets
-const secret = 'my-secret-key';
-
-// ✅ DO: Validate user ownership
-if (transaction.user_id !== req.headers.get('x-user-id')) {
-  throw new Error('Unauthorized');
-}
-
-// ❌ DON'T: Trust client data
-const userId = req.body.userId; // NEVER!
+```sh
+npm run verify:finance -- --backup
+npm run verify:finance -- --baseline db/finance-export-EXAMPLE.local.json
 ```
 
----
+Both commands only read the live database. Local financial snapshots, backup metadata and environment files are excluded from Git. Private snapshots from the completed migrations are retained.
 
-## 📦 Database Schema
+## Install as an application
 
-### Users Table
-```sql
-CREATE TABLE auth_users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email TEXT UNIQUE NOT NULL,
-  username TEXT NOT NULL,
-  password_hash TEXT,
-  google_id TEXT UNIQUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+Serve over HTTPS or localhost and choose **התקנת האפליקציה** in the account menu or login screen. Chrome/Edge can show a native installation prompt. On iPhone/iPad use Share → Add to Home Screen; in macOS Safari use File → Add to Dock.
 
-### Transactions Table
-```sql
-CREATE TABLE transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
-  amount NUMERIC NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('cash', 'bit', 'bank')),
-  date DATE NOT NULL,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+Launch the installed icon for a standalone window. The service worker caches only the generic offline screen; financial pages, API responses and authentication requests continue to use the network.
 
-### User Shares Table
-```sql
-CREATE TABLE user_shares (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
-  shared_with_id UUID NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(owner_id, shared_with_id)
-);
-```
+## Deployment
 
----
-
-## 🛠️ Development
-
-### Available Commands
-
-```bash
-npm run dev        # Start development server (port 3000)
-npm run build      # Build for production
-npm run start      # Start production server
-```
-
-### Tech Stack
-- **Frontend**: Next.js 16, React 18, TypeScript 5.8
-- **Styling**: Tailwind CSS 3.4
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: JWT (jose), bcryptjs
-- **Charts**: Recharts 2.12
-- **Animations**: Framer Motion 11
-- **Icons**: Lucide React
-- **Validation**: Zod
-
----
-
-## 🚀 Deployment
-
-### Deploy to Vercel
-
-1. Push code to GitHub
-2. Import project at [vercel.com](https://vercel.com)
-3. Add all environment variables
-4. Deploy!
-
-### Production Checklist
-- [ ] Strong JWT secrets (32+ characters)
-- [ ] `NODE_ENV=production`
-- [ ] Supabase RLS policies enabled
-- [ ] HTTPS only
-- [ ] Secure cookie flags
-- [ ] Rate limiting configured
-- [ ] Database backups enabled
-- [ ] Monitoring set up (Sentry, etc.)
-- [ ] Error tracking enabled
-
----
-
-## 🐛 Troubleshooting
-
-### Port 3000 in use?
-```bash
-# Windows
-netstat -ano | findstr :3000
-taskkill /PID <pid> /F
-
-# Mac/Linux
-lsof -ti:3000 | xargs kill -9
-```
-
-### Database connection fails?
-- Verify Supabase URL and key in `.env.local`
-- Check all SQL scripts ran successfully
-- Ensure table names match code
-
-### Google OAuth not working?
-- Verify redirect URI matches exactly
-- Check Client ID and Secret are correct
-- Ensure Google+ API is enabled
-- Clear browser cookies and try again
-
-### Token refresh fails?
-- Clear browser cookies
-- Log out and log in again (one-time fix for existing sessions)
-- Verify JWT secrets are set
-
----
-
-## 📚 How It Works
-
-### Authentication Flow
-```
-User Login
-   ↓
-Validate credentials
-   ↓
-Generate JWT tokens (access + refresh)
-   ↓
-Store refresh token in database
-   ↓
-Return access token + set HttpOnly cookie
-   ↓
-User authenticated!
-```
-
-### Token Refresh
-```
-API call with expired token (401)
-   ↓
-Auto-refresh with refresh token cookie
-   ↓
-Get new access token
-   ↓
-Retry original request
-```
-
-### Data Flow
-1. User adds transaction → POST /api/transactions
-2. Middleware validates JWT token
-3. Database stores with user_id
-4. UI updates optimistically
-5. Charts recalculate automatically
-
----
-
-## 🎯 Future Ideas
-
-- Export to CSV/PDF
-- Budget tracking with alerts
-- Recurring transactions
-- Mobile app (React Native)
-- Email notifications
-- Advanced analytics
-- Dark mode
-- Multi-currency support
-- Custom categories
-- Receipt photo uploads
-
----
-
-## 👨‍💻 Contributing
-
-Contributions are welcome!
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push: `git push origin feature/amazing-feature`
-5. Open Pull Request
-
-**Code Style:**
-- Use TypeScript
-- Follow existing patterns
-- Keep components small
-- Add comments for complex logic
-- Test your changes
-
----
-
-## 📞 Support
-
-- Open an issue for bugs
-- Start a discussion for questions
-- Check existing issues before creating new ones
-
----
-
-<div align="center">
-
-**Made with ❤️ by Shahar**
-
-⭐ Star this repo if you find it helpful!
-
-</div>
+Configure the environment variables and Supabase redirect URLs for the deployment, then run `npm run type-check`, `npm test` and `npm run build`. The service-role key belongs only in the server environment. Middleware validates the Supabase session and overwrites identity headers; database RLS enforces admission and administrator permissions.

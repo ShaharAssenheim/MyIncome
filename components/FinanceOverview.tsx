@@ -1,15 +1,16 @@
 "use client";
 
-import { ArrowLeft, PiggyBank } from "lucide-react";
+import { PiggyBank } from "lucide-react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useMemo } from "react";
-import { FinanceData, money, SavingsMonth } from "../lib/finance";
-import { personalSalarySummary } from "../lib/income";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { useMemo, useState } from "react";
+import { familyPortfolio, FinanceData, money, SavingsMonth } from "../lib/finance";
+import { incomeDateParts } from "../lib/income-date";
+import { combinedSalaryTimeline, personalSalarySummary } from "../lib/income";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Skeleton } from "./ui/skeleton";
 
-const IncomeComparisonChart = dynamic(() => import("./FinanceCharts.tsx").then((module) => module.IncomeComparisonChart), {
+const CombinedIncomeChart = dynamic(() => import("./FinanceCharts.tsx").then((module) => module.CombinedIncomeChart), {
   ssr: false, loading: () => <Skeleton className="h-56" />,
 });
 const HoldingsChart = dynamic(() => import("./FinanceCharts.tsx").then((module) => module.HoldingsChart), {
@@ -20,25 +21,22 @@ interface OverviewStatistics {
   latest?: SavingsMonth;
 }
 
-const salaryMonthFormatter = new Intl.DateTimeFormat("he-IL", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
-function formatSalaryMonth(period: string) {
-  const [year, month] = period.split("-").map(Number);
-  return salaryMonthFormatter.format(new Date(Date.UTC(year, month - 1, 1)));
-}
-
-export function FinanceOverview({ data, statistics, year }: {
+export function FinanceOverview({ data, statistics }: {
   data: FinanceData;
   statistics: OverviewStatistics;
-  year: string;
 }) {
-  const salaries = useMemo(() => personalSalarySummary(data.income, year), [data.income, year]);
-  const chartData = salaries.months.slice(-6);
-  const holdings = (data.savings?.holdings ?? []).filter((item) => item.value > 0);
+  const today = incomeDateParts();
+  const currentYear = String(today.year);
+  const currentPeriod = `${currentYear}-${String(today.month).padStart(2, "0")}`;
+  const [chartYear, setChartYear] = useState(currentYear);
+  const chartSalaries = useMemo(() => personalSalarySummary(data.income), [data.income]);
+  const chartYears = useMemo(() => [...new Set([
+    currentYear,
+    ...chartSalaries.months.map((month) => month.period.slice(0, 4)),
+  ])].sort().reverse(), [currentYear, chartSalaries.months]);
+  const chartData = useMemo(() => combinedSalaryTimeline(chartSalaries.months, chartYear, currentPeriod), [chartSalaries.months, chartYear, currentPeriod]);
+  const annualAverage = chartData[0]?.annualAverage;
+  const { holdings, cash } = useMemo(() => familyPortfolio(data), [data.savings, data.bankYears]);
 
   return (
     <>
@@ -51,19 +49,43 @@ export function FinanceOverview({ data, statistics, year }: {
       </section>
 
       <div className="overview-chart-grid">
-        <Card className="overview-chart-card">
+        <Card className="overview-chart-card min-w-0">
           <CardHeader>
             <CardTitle>משכורות לאורך זמן</CardTitle>
-            <CardDescription>עד 6 חודשים אחרונים עם נתונים{year !== "all" ? ` · ${year}` : ""}</CardDescription>
+            <CardDescription>
+              ממוצע חודשי בשנת {chartYear}: {annualAverage == null ? "—" : money(annualAverage)}
+              <span className="block">לפי חודשים שהסתיימו ויש בהם נתוני משכורת</span>
+            </CardDescription>
+            <CardAction>
+              <Select
+                items={chartYears.map((value) => ({ value, label: value }))}
+                value={chartYear}
+                onValueChange={(value) => {
+                  if (value !== null) setChartYear(String(value));
+                }}
+              >
+                <SelectTrigger size="sm" aria-label="שנה לגרף המשכורות" className="min-w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectGroup>
+                    {chartYears.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </CardAction>
           </CardHeader>
           <CardContent>
-            {chartData.length ? <IncomeComparisonChart data={chartData} /> : <div className="chart-empty">אין משכורות בתקופה שנבחרה</div>}
+            <CombinedIncomeChart data={chartData} />
           </CardContent>
         </Card>
         <Card className="overview-chart-card">
           <CardHeader>
             <CardTitle>תיק ההשקעות המשפחתי</CardTitle>
-            <CardDescription>{data.savings ? `הרכב התיק · נכון ל־${data.savings.portfolioAsOf}` : "התפלגות ההשקעות שלכם"}</CardDescription>
+            <CardDescription>
+              {data.savings ? `השקעות · נכון ל־${data.savings.portfolioAsOf}` : "התפלגות הנכסים שלכם"}
+              {cash && <span className="block">עו״ש · נכון ל־{cash.date}</span>}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {holdings.length ? <HoldingsChart data={holdings} /> : <div className="chart-empty">עדיין אין נתוני השקעות להצגה</div>}
@@ -71,29 +93,6 @@ export function FinanceOverview({ data, statistics, year }: {
         </Card>
       </div>
 
-      <div className="overview-account-grid">
-        {([
-          { href: "/kristin", name: "קריסטין", total: salaries.totals.kristin, range: salaries.ranges.kristin, initial: "ק", className: "account-kristin" },
-          { href: "/shahar", name: "שחר", total: salaries.totals.shahar, range: salaries.ranges.shahar, initial: "ש", className: "account-shahar" },
-        ]).map((account) => (
-          <Link key={account.href} href={account.href} className={`account-shortcut ${account.className}`}>
-            <div className="account-card-heading"><span className="account-initial" aria-hidden="true">{account.initial}</span><span className="account-card-name">{account.name}</span><ArrowLeft size={17} className="account-card-arrow" aria-hidden="true" /></div>
-            <p className="account-card-value">{money(account.total)}</p>
-            <p className="account-card-description">
-              סך המשכורות
-              <br />
-              {account.range ? (
-                <>
-                  מ־<time dateTime={account.range.from}>{formatSalaryMonth(account.range.from)}</time>
-                  {" עד "}
-                  <time dateTime={account.range.to}>{formatSalaryMonth(account.range.to)}</time>
-                </>
-              ) : "אין נתונים בתקופה שנבחרה"}
-            </p>
-            <div className="account-card-footer">לצפייה בהכנסות <ArrowLeft size={14} aria-hidden="true" /></div>
-          </Link>
-        ))}
-      </div>
     </>
   );
 }

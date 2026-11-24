@@ -7,13 +7,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PencilLine } from "lucide-react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CategoryCard } from "../components/CategoryCard";
-import {
-  DynamicSummaryCard,
-  DynamicTrendsChart,
-} from "../components/ClientCharts";
+import { SummaryCard } from "./SummaryCard";
 import { MonthSelector } from "../components/MonthSelector";
 import { TransactionList } from "../components/TransactionList";
 import { useDataQuery } from "../lib/client-data";
@@ -21,6 +17,32 @@ import { IncomeRow } from "../lib/income";
 import { incomeDateParts } from "../lib/income-date";
 import { useAuth } from "../lib/useAuth";
 import { IncomeType, MonthlyStats, Transaction } from "../types";
+const DynamicTrendsChart = dynamic(
+  async () => {
+    const mod = await import("./TrendsChart.tsx");
+    return mod.TrendsChart;
+  },
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="rounded-2xl border border-border bg-card p-6"
+        role="status"
+        aria-label="טוען מגמת הכנסות"
+      >
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-accent rounded-xl w-10 h-10" />
+          <div>
+            <Skeleton className="h-5 w-32 bg-muted  rounded"></Skeleton>
+            <Skeleton className="h-4 w-24 bg-muted  rounded mt-1"></Skeleton>
+          </div>
+        </div>
+        <Skeleton className="h-[300px] w-full bg-muted  rounded-xl"></Skeleton>
+      </div>
+    ),
+  },
+);
+
 const TransactionModal = dynamic(() =>
   import("./TransactionModal.tsx").then((module) => module.TransactionModal),
 );
@@ -145,13 +167,7 @@ export function IncomeDashboard({
           </h1>
           {person === "shahar" && (
             <p className="ui-page-description">
-              משכורות מדוחות הבנק משויכות לחודש העבודה שקדם לקבלתן.{" "}
-              <Link
-                href="/"
-                className="text-primary underline underline-offset-4"
-              >
-                ייבוא דוחות בסקירה הכללית
-              </Link>
+              ההכנסות מוצגות לפי חודש העבודה. תאריך ההפקדה המקורי נשמר בנפרד.
             </p>
           )}
         </header>
@@ -186,12 +202,12 @@ export function IncomeDashboard({
                 orientation="vertical"
                 className="mx-1 hidden h-6 sm:block"
               />
-              <div className="flex items-center gap-2">
+              <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                 <Label htmlFor="income-month">בחירת חודש</Label>
                 <Input
                   id="income-month"
                   type="month"
-                  className="w-auto"
+                  className="w-full min-w-0 sm:w-auto"
                   value={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`}
                   onChange={(event) => {
                     if (!/^\d{4}-\d{2}$/.test(event.target.value)) return;
@@ -214,7 +230,7 @@ export function IncomeDashboard({
                 </Button>
               )}
             </div>
-            <DynamicSummaryCard stats={stats} />
+            <SummaryCard stats={stats} />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {[IncomeType.CASH, IncomeType.BIT, IncomeType.BANK].map(
                 (type) => (

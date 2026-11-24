@@ -1,3 +1,6 @@
+export type IncomePerson = "shahar" | "kristin";
+export const incomeTable = (person: IncomePerson) => person === "shahar" ? "shahar_income" : "kristin_income";
+
 export interface IncomeRow {
   id: string;
   amount: number;
@@ -9,6 +12,7 @@ export interface IncomeRow {
   read_only?: boolean;
   employer?: string | null;
   month_override?: boolean;
+  is_salary?: boolean;
 }
 export interface MonthOverride {
   person: string;
@@ -19,38 +23,25 @@ export interface MonthOverride {
   updated_at: string;
 }
 
-export interface SalaryRow {
+export interface IncomeRecord {
   id: string;
-  bank_transaction_id: string | null;
-  payment_date: string;
+  income_date: string;
+  payment_date: string | null;
   amount: number;
+  payment_method: string;
+  is_salary: boolean;
+  description: string | null;
   employer: string | null;
   created_at: string;
 }
 
-// Derive the work month from the source receipt every time. Never shift a
-// previously derived income date or change the bank transaction itself.
-export function salaryIncomeDate(paymentDate: string, imported: boolean) {
-  if (!imported) return paymentDate;
-  const year = Number(paymentDate.slice(0, 4));
-  const month = Number(paymentDate.slice(5, 7));
-  const workYear = month === 1 ? year - 1 : year;
-  const workMonth = month === 1 ? 12 : month - 1;
-  return `${workYear}-${String(workMonth).padStart(2, "0")}-01`;
-}
-
-export function salaryToIncome(row: SalaryRow): IncomeRow {
+export function incomeRecordToRow(row: IncomeRecord, person: "shahar" | "kristin"): IncomeRow {
   return {
-    id: `salary-${row.id}`,
-    date: salaryIncomeDate(row.payment_date, Boolean(row.bank_transaction_id)),
-    payment_date: row.payment_date,
-    amount: Number(row.amount),
-    type: "bank",
-    employer: row.employer,
-    description: row.employer
-      ? `משכורת · ${row.employer}`
-      : "משכורת · המעסיק לא זוהה בדוח",
-    created_at: row.created_at,
+    id: `${person === "shahar" && row.is_salary ? "salary" : person}-${row.id}`,
+    date: row.income_date, payment_date: row.payment_date ?? undefined,
+    amount: Number(row.amount), type: row.payment_method,
+    description: row.description ?? undefined, employer: row.employer,
+    created_at: row.created_at, is_salary: row.is_salary,
   };
 }
 
@@ -81,7 +72,7 @@ export function personalSalaryRows(
 
   return [
     ...selected.filter(
-      (row) => row.id.startsWith("salary-") && !overrides.has(row.date.slice(0, 7)),
+      (row) => (row.is_salary || row.id.startsWith("salary-")) && !overrides.has(row.date.slice(0, 7)),
     ),
     ...[...overrides].map(([period, row]) => ({
       ...row,
@@ -132,6 +123,44 @@ export function personalSalarySummary(
       shahar: month.shahar / 100,
     })),
   };
+}
+
+export function combinedSalaryTimeline(
+  months: { period: string; kristin: number; shahar: number }[],
+  year: string,
+  currentPeriod: string,
+) {
+  const selected = months.filter((month) => year === "all" || month.period.startsWith(`${year}-`));
+  const totals = new Map(selected.map((month) => [
+    month.period,
+    {
+      total: Math.round(month.kristin * 100) + Math.round(month.shahar * 100),
+      kristin: Math.round(month.kristin * 100),
+      shahar: Math.round(month.shahar * 100),
+    },
+  ]));
+  const years = year === "all"
+    ? [...new Set(selected.map((month) => month.period.slice(0, 4)))].sort()
+    : [year];
+
+  return years.flatMap((salaryYear) => {
+    const recorded = [...totals].filter(([period]) => period.startsWith(`${salaryYear}-`) && period < currentPeriod);
+    // Average only completed months with data; retain current/future data in the chart.
+    const annualAverage = recorded.length
+      ? Math.round(recorded.reduce((sum, [, cents]) => sum + cents.total, 0) / recorded.length) / 100
+      : null;
+    return Array.from({ length: 12 }, (_, index) => {
+      const period = `${salaryYear}-${String(index + 1).padStart(2, "0")}`;
+      const cents = totals.get(period);
+      return {
+        period,
+        total: cents === undefined ? null : cents.total / 100,
+        kristin: cents === undefined ? null : cents.kristin / 100,
+        shahar: cents === undefined ? null : cents.shahar / 100,
+        annualAverage,
+      };
+    });
+  });
 }
 
 export function applyMonthlyOverrides(

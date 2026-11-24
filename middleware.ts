@@ -148,7 +148,6 @@ export async function middleware(req: NextRequest) {
     }
     if (
       (pathname.startsWith("/api/access") ||
-        pathname.startsWith("/api/shares") ||
         pathname === "/api/users") &&
       !access.isAdmin
     ) {

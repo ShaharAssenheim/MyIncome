@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Suspense } from "react";
 import { FinanceDashboard } from "../components/FinanceDashboard";
-import { loadFinanceOverview } from "../lib/finance-data";
+import { loadFinanceOverview } from "../lib/finance-server";
 export const dynamic = "force-dynamic";
 async function OverviewContent() {
   let initialData;

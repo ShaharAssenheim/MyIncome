@@ -9,3 +9,16 @@ export const supabaseAdmin = createClient(
 );
 
 export default supabaseAdmin;
+
+export async function readRows(table: string, orderFields = ["id"], columns = "*", filters: Record<string, string | boolean> = {}) {
+  const rows = [];
+  for (let offset = 0; ; offset += 1000) {
+    let query = supabaseAdmin.from(table).select(columns);
+    for (const [field, value] of Object.entries(filters)) query = query.eq(field, value);
+    for (const field of orderFields) query = query.order(field);
+    const { data, error } = await query.range(offset, offset + 999);
+    if (error) throw new Error(`${table}: ${error.message}`);
+    rows.push(...data);
+    if (data.length < 1000) return rows;
+  }
+}
